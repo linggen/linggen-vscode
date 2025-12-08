@@ -1,0 +1,101 @@
+{
+  "name": "linggen-vscode",
+  "displayName": "Linggen",
+  "description": "Linggen integration for VS Code - visualize architecture and enhance LLM workflows",
+  "version": "0.1.0",
+  "publisher": "linggen",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:linggen.install",
+    "onCommand:linggen.start",
+    "onCommand:linggen.indexCurrentProject",
+    "onCommand:linggen.openInLinggen",
+    "onCommand:linggen.configureCursorMsp"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "linggen.install",
+        "title": "Linggen: Install Linggen"
+      },
+      {
+        "command": "linggen.start",
+        "title": "Linggen: Start Linggen"
+      },
+      {
+        "command": "linggen.indexCurrentProject",
+        "title": "Linggen: Index Current Project"
+      },
+      {
+        "command": "linggen.openInLinggen",
+        "title": "Linggen: Open in Linggen"
+      },
+      {
+        "command": "linggen.configureCursorMsp",
+        "title": "Linggen: Configure Cursor msp.json"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "linggen.openInLinggen",
+          "group": "navigation@10"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Linggen",
+      "properties": {
+        "linggen.backend.mode": {
+          "type": "string",
+          "enum": ["cli", "http"],
+          "default": "http",
+          "description": "How to communicate with Linggen backend (cli or http)"
+        },
+        "linggen.backend.cliPath": {
+          "type": "string",
+          "default": "linggen",
+          "description": "Path to the Linggen CLI binary"
+        },
+        "linggen.backend.httpUrl": {
+          "type": "string",
+          "default": "http://localhost:3030",
+          "description": "URL of the Linggen HTTP server"
+        },
+        "linggen.installUrl": {
+          "type": "string",
+          "default": "https://linggen.dev",
+          "description": "URL to open for Linggen installation instructions"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.x",
+    "@types/mocha": "^10.0.6",
+    "@types/glob": "^8.1.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "eslint": "^8.54.0",
+    "typescript": "^5.3.0",
+    "@vscode/test-electron": "^2.3.8",
+    "mocha": "^10.2.0",
+    "glob": "^10.3.10"
+  }
+}
+
