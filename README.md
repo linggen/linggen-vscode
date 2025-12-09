@@ -123,17 +123,20 @@ The extension can be configured via VS Code settings (`Preferences: Open Setting
 {
   "linggen.backend.mode": "http", // "cli" or "http"
   "linggen.backend.cliPath": "linggen", // Path to Linggen binary
-  "linggen.backend.httpUrl": "http://localhost:3030", // Linggen server URL
+  "linggen.backend.httpUrl": "http://localhost:8787", // Linggen server URL
+  "linggen.backend.mcpUrl": "http://localhost:8787/mcp/sse", // Linggen MCP SSE endpoint
   "linggen.installUrl": "https://linggen.dev" // Installation page URL
 }
 ```
 
+**Note**: Both the main API and MCP endpoints run on port 8787.
+
 #### Usage
 
-1. **Start Linggen**: Run `Linggen: Start Linggen` from the Command Palette
-2. **Index your project**: Run `Linggen: Index Current Project` to build the dependency graph
-3. **Open files in Linggen**: Right-click any file or folder in the Explorer and select `Linggen: Open in Linggen`
-4. **Configure Cursor integration**: Run `Linggen: Configure Cursor msp.json` to get a configuration snippet for Cursor
+1. **Start Linggen**: The extension will automatically start Linggen when needed, or you can run `Linggen: Start Linggen` from the Command Palette
+2. **Index your project**: Run `Linggen: Index Current Project` to build the dependency graph (auto-starts Linggen if not running)
+3. **Open files in Linggen**: Right-click any file or folder in the Explorer and select `Linggen: Open in Linggen` (auto-starts Linggen if not running)
+4. **Configure Cursor integration**: Run `Linggen: Configure Cursor msp.json` to automatically create the configuration file
 
 #### Cursor Integration
 
@@ -155,13 +158,13 @@ Example `mcp.json` configuration that will be created:
 {
   "mcpServers": {
     "linggen": {
-      "url": "http://localhost:3030/mcp/sse"
+      "url": "http://localhost:8787/mcp/sse"
     }
   }
 }
 ```
 
-Note: The MCP endpoint uses Server-Sent Events (SSE) at `/mcp/sse`. If your Linggen server runs on a different port, update the `linggen.backend.httpUrl` setting before running the configure command.
+Note: The MCP endpoint uses Server-Sent Events (SSE) and runs on port 8787 by default. If your Linggen MCP server runs on a different port, update the `linggen.backend.mcpUrl` setting before running the configure command.
 
 ### Development
 

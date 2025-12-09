@@ -10,35 +10,24 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [
-    "onCommand:linggen.install",
-    "onCommand:linggen.start",
-    "onCommand:linggen.indexCurrentProject",
-    "onCommand:linggen.openInLinggen",
-    "onCommand:linggen.configureCursorMsp"
-  ],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
       {
         "command": "linggen.install",
-        "title": "Linggen: Install Linggen"
-      },
-      {
-        "command": "linggen.start",
-        "title": "Linggen: Start Linggen"
+        "title": "🌀 Linggen: Install Linggen"
       },
       {
         "command": "linggen.indexCurrentProject",
-        "title": "Linggen: Index Current Project"
+        "title": "🌀 Linggen: Index Current Project"
       },
       {
-        "command": "linggen.openInLinggen",
-        "title": "Linggen: Open in Linggen"
+        "command": "linggen.openGraphView",
+        "title": "🌀 Linggen: Open Graph"
       },
       {
         "command": "linggen.configureCursorMsp",
-        "title": "Linggen: Configure Cursor msp.json"
+        "title": "🌀 Linggen: Configure Cursor msp.json"  
       }
     ],
     "menus": {
@@ -46,27 +35,26 @@
         {
           "command": "linggen.openInLinggen",
           "group": "navigation@10"
+        },
+        {
+          "command": "linggen.openGraphView",
+          "group": "navigation@11"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "linggen.openGraphView",
+          "group": "navigation@11"
         }
       ]
     },
     "configuration": {
       "title": "Linggen",
       "properties": {
-        "linggen.backend.mode": {
-          "type": "string",
-          "enum": ["cli", "http"],
-          "default": "http",
-          "description": "How to communicate with Linggen backend (cli or http)"
-        },
-        "linggen.backend.cliPath": {
-          "type": "string",
-          "default": "linggen",
-          "description": "Path to the Linggen CLI binary"
-        },
         "linggen.backend.httpUrl": {
           "type": "string",
-          "default": "http://localhost:3030",
-          "description": "URL of the Linggen HTTP server"
+          "default": "http://localhost:8787",
+          "description": "Base URL of the Linggen HTTP server (used for UI and MCP, e.g. {httpUrl}/mcp/sse)"
         },
         "linggen.installUrl": {
           "type": "string",
@@ -98,4 +86,3 @@
     "glob": "^10.3.10"
   }
 }
-

@@ -20,8 +20,12 @@ All notable changes to the "linggen-vscode" extension will be documented in this
 
 ### Changed
 
-- Updated MCP configuration format to use simple SSE URL format (`url: "http://localhost:3030/mcp/sse"`)
+- Updated MCP configuration format to use simple SSE URL format (`url: "http://localhost:8787/mcp/sse"`)
 - Configure Cursor command now automatically creates/updates the file instead of just showing a snippet
+- Default port changed to 8787 (the actual Linggen server port)
+- Improved HTTP indexing to use correct API endpoint `/api/sources/:source_id/graph/rebuild`
+- Added server health checks before indexing or opening files in Linggen
+- Commands now automatically start Linggen if the server is not running (no manual prompt needed)
 
 ### Notes
 
