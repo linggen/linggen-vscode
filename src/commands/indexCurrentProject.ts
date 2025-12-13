@@ -1,8 +1,11 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 import { getOutputChannel } from '../output';
 import { checkServerHealth } from '../helpers';
-import { getOrCreateLocalResourceForWorkspace } from '../linggenApi';
+import {
+    getOrCreateLocalResourceForWorkspace,
+    listJobs,
+    type Job
+} from '../linggenApi';
 
 /**
  * Command: Linggen: Index Current Project
@@ -39,8 +42,9 @@ export async function indexCurrentProject(): Promise<void> {
             title: 'Indexing project with Linggen...',
             cancellable: false
         },
-        async () => {
+        async (progress) => {
             try {
+                progress.report({ message: 'Locating Linggen source…' });
                 // 1) Find or create a resource for this workspace
                 outputChannel.appendLine(
                     `Locating Linggen resource for workspace: ${workspacePath}`
@@ -54,6 +58,7 @@ export async function indexCurrentProject(): Promise<void> {
                 );
 
                 // 2) Trigger indexing for the resource (incremental by default)
+                progress.report({ message: 'Starting indexing job…' });
                 const indexEndpoint = `${httpUrl}/api/index_source`;
                 outputChannel.appendLine(
                     `Triggering indexing: POST ${indexEndpoint} (source_id=${matching.id})`
@@ -78,13 +83,68 @@ export async function indexCurrentProject(): Promise<void> {
                     throw new Error(`HTTP ${indexResponse.status}: ${errorText}`);
                 }
 
-                const indexResult = await indexResponse.json();
+                const indexResult = (await indexResponse.json()) as {
+                    // eslint-disable-next-line @typescript-eslint/naming-convention
+                    job_id: string;
+                    // eslint-disable-next-line @typescript-eslint/naming-convention
+                    files_indexed?: number;
+                    // eslint-disable-next-line @typescript-eslint/naming-convention
+                    chunks_created?: number;
+                };
+
+                const jobId = indexResult.job_id;
                 outputChannel.appendLine(
-                    `Indexing job started: ${JSON.stringify(indexResult)}`
+                    `Indexing job started: id=${jobId}, files=${indexResult.files_indexed}, chunks=${indexResult.chunks_created}`
                 );
                 vscode.window.showInformationMessage(
                     `Started indexing job for Linggen resource: ${matching.name}`
                 );
+
+                // 3) Poll job status until completion
+                progress.report({ message: 'Indexing in progress…' });
+                const pollIntervalMs = 2000;
+                let lastStatus: string | undefined;
+                // eslint-disable-next-line no-constant-condition
+                while (true) {
+                    await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+                    let jobs: Job[];
+                    try {
+                        jobs = await listJobs(httpUrl);
+                    } catch (e) {
+                        outputChannel.appendLine(
+                            `Failed to fetch job list while monitoring indexing job: ${String(
+                                e
+                            )}`
+                        );
+                        break;
+                    }
+
+                    const job = jobs.find((j) => j.id === jobId);
+                    if (!job) {
+                        outputChannel.appendLine(
+                            `Indexing job ${jobId} not found in job list; stopping polling.`
+                        );
+                        break;
+                    }
+
+                    if (job.status !== lastStatus) {
+                        lastStatus = job.status;
+                        const progressMsg =
+                            job.status === 'Running'
+                                ? `Indexing ${matching.name}… ${job.files_indexed ?? 0} files, ${
+                                      job.chunks_created ?? 0
+                                  } chunks`
+                                : `Job ${job.status}${
+                                      job.error ? ` – ${job.error}` : ''
+                                  }`;
+                        outputChannel.appendLine(`Job ${job.id} status: ${progressMsg}`);
+                        progress.report({ message: progressMsg });
+                    }
+
+                    if (job.status === 'Completed' || job.status === 'Failed') {
+                        break;
+                    }
+                }
             } catch (error) {
                 const errorMsg = `Failed to index project via Linggen HTTP API: ${error}`;
                 outputChannel.appendLine(errorMsg as string);

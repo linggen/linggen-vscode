@@ -58,6 +58,15 @@ export interface GraphQuery {
     hops?: number;
 }
 
+// Combined graph + status response from /graph/with_status
+export interface GraphWithStatusResponse extends GraphResponse {
+    status: string;
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    node_count: number;
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    edge_count: number;
+}
+
 /**
  * Fetch all Linggen resources from the backend.
  */
@@ -205,5 +214,71 @@ export async function getGraph(
         throw new Error(`Failed to get graph: HTTP ${response.status}`);
     }
     return (await response.json()) as GraphResponse;
+}
+
+export async function getGraphWithStatus(
+    httpUrl: string,
+    sourceId: string,
+    query?: GraphQuery
+): Promise<GraphWithStatusResponse> {
+    const base = httpUrl.replace(/\/+$/, '');
+    const params = new URLSearchParams();
+    if (query?.folder) {
+        params.set('folder', query.folder);
+    }
+    if (query?.focus) {
+        params.set('focus', query.focus);
+    }
+    if (query?.hops !== undefined) {
+        params.set('hops', String(query.hops));
+    }
+
+    const endpoint = `${base}/api/sources/${encodeURIComponent(
+        sourceId
+    )}/graph/with_status${params.toString() ? `?${params.toString()}` : ''}`;
+
+    const response = await fetch(endpoint, {
+        method: 'GET',
+        signal: AbortSignal.timeout(15000)
+    });
+    if (!response.ok) {
+        throw new Error(`Failed to get graph with status: HTTP ${response.status}`);
+    }
+    return (await response.json()) as GraphWithStatusResponse;
+}
+
+// Jobs API (used for indexing progress)
+export type JobStatus = 'Pending' | 'Running' | 'Completed' | 'Failed';
+
+export interface Job {
+    id: string;
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    source_id: string;
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    source_name: string;
+    status: JobStatus | string;
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    files_indexed?: number;
+    // eslint-disable-next-line @typescript-eslint/naming-convention
+    chunks_created?: number;
+    error?: string;
+}
+
+export interface ListJobsResponse {
+    jobs: Job[];
+}
+
+export async function listJobs(httpUrl: string): Promise<Job[]> {
+    const base = httpUrl.replace(/\/+$/, '');
+    const endpoint = `${base}/api/jobs`;
+    const response = await fetch(endpoint, {
+        method: 'GET',
+        signal: AbortSignal.timeout(10000)
+    });
+    if (!response.ok) {
+        throw new Error(`Failed to list jobs: HTTP ${response.status}`);
+    }
+    const json = (await response.json()) as ListJobsResponse;
+    return json.jobs ?? [];
 }
 

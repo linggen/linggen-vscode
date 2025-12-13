@@ -27,15 +27,11 @@
       },
       {
         "command": "linggen.configureCursorMsp",
-        "title": "🌀 Linggen: Configure Cursor msp.json"  
+        "title": "🌀 Linggen: Configure Cursor msp.json"
       }
     ],
     "menus": {
       "explorer/context": [
-        {
-          "command": "linggen.openInLinggen",
-          "group": "navigation@10"
-        },
         {
           "command": "linggen.openGraphView",
           "group": "navigation@11"

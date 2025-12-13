@@ -2,8 +2,11 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { getOutputChannel } from '../output';
 import { checkServerHealth } from '../helpers';
-import { getGraph, getGraphStatus, listResources, type GraphResponse, type Resource } from '../linggenApi';
+import { getGraphWithStatus, listResources, type GraphResponse, type Resource } from '../linggenApi';
 import { getGraphWebviewHtml } from '../graphWebview';
+
+// In-memory cache of graphs per source for this VS Code session.
+const graphCache: Map<string, GraphResponse> = new Map();
 
 function getLoadingHtml(fileName: string): string {
     return `<!DOCTYPE html>
@@ -64,8 +67,57 @@ function getLoadingHtml(fileName: string): string {
     <div class="spinner"></div>
     <div class="subtitle">${fileName}</div>
   </div>
-</body>
-</html>`;
+ </body>
+ </html>`;
+}
+
+/**
+ * Build a focused subgraph consisting of the current file/folder node
+ * and its direct neighbors. Returns both the trimmed graph and the
+ * focus node id (or null if not found).
+ */
+function buildFocusedGraph(
+    graph: GraphResponse,
+    focusPath: string,
+    focusLabel: string,
+    focusFolder: string,
+    relativePosix: string
+): { graphForView: GraphResponse; focusNodeId: string | null } {
+    const focusNode = graph.nodes.find(
+        (n) =>
+            n.label === focusLabel &&
+            (n.folder === focusFolder ||
+                n.folder === relativePosix || // fallback
+                `${n.folder}/${n.label}` === focusPath)
+    );
+    const focusNodeId = focusNode?.id ?? null;
+
+    let graphForView: GraphResponse = graph;
+    if (focusNodeId) {
+        const neighborIds = new Set<string>();
+        neighborIds.add(focusNodeId);
+
+        for (const edge of graph.edges) {
+            if (edge.source === focusNodeId) {
+                neighborIds.add(edge.target);
+            } else if (edge.target === focusNodeId) {
+                neighborIds.add(edge.source);
+            }
+        }
+
+        const filteredNodes = graph.nodes.filter((n) => neighborIds.has(n.id));
+        const filteredEdges = graph.edges.filter(
+            (e) => neighborIds.has(e.source) && neighborIds.has(e.target)
+        );
+
+        graphForView = {
+            ...graph,
+            nodes: filteredNodes,
+            edges: filteredEdges
+        };
+    }
+
+    return { graphForView, focusNodeId };
 }
 
 /**
@@ -168,31 +220,30 @@ export async function openGraphView(uri?: vscode.Uri): Promise<void> {
         relativeToSource = path.relative(source.path, targetPath);
     }
     const relativePosix = relativeToSource.split(path.sep).join('/');
-    const parts = relativePosix.split('/');
-    const focusLabel = parts.pop() ?? relativePosix;
-    const focusFolder = parts.join('/');
+    const focusPath = relativePosix;
+    const focusLabel = path.basename(focusPath);
+    const lastSlash = focusPath.lastIndexOf('/');
+    const focusFolder = lastSlash > 0 ? focusPath.slice(0, lastSlash) : '';
 
-    // 3) Fetch graph status (optional, for logging / future UI)
-    try {
-        const status = await getGraphStatus(httpUrl, source.id);
-        outputChannel.appendLine(
-            `Graph status for source ${source.id}: ${status.status} (${status.node_count ?? 0} nodes, ${status.edge_count ?? 0} edges)`
-        );
-    } catch (error) {
-        outputChannel.appendLine(
-            `Failed to get graph status for source ${source.id}: ${error}`
-        );
-    }
-
-    // 4) Fetch full graph data for this source
+    // 3) Fetch graph data (and status) for this source via /graph/with_status,
+    //    using an in-memory cache so we only pay the network cost once per source.
     let graph: GraphResponse;
     try {
-        // Fetch the full graph (no server-side folder/focus filter).
-        // We'll locate and focus the current file purely on the client side.
-        graph = await getGraph(httpUrl, source.id);
-        outputChannel.appendLine(
-            `Loaded graph for project ${graph.project_id}: ${graph.nodes.length} nodes, ${graph.edges.length} edges.`
-        );
+        const cacheKey = source.id;
+        const cached = graphCache.get(cacheKey);
+        if (cached) {
+            graph = cached;
+            outputChannel.appendLine(
+                `Using cached graph for source ${source.id}: ${cached.nodes.length} nodes, ${cached.edges.length} edges.`
+            );
+        } else {
+            const full = await getGraphWithStatus(httpUrl, source.id);
+            graph = full;
+            graphCache.set(cacheKey, full);
+            outputChannel.appendLine(
+                `Loaded graph for source ${source.id}: ${full.status} (${full.node_count} nodes, ${full.edge_count} edges).`
+            );
+        }
     } catch (error) {
         const errorMsg = `Failed to load Linggen graph: ${error}`;
         outputChannel.appendLine(errorMsg as string);
@@ -200,46 +251,17 @@ export async function openGraphView(uri?: vscode.Uri): Promise<void> {
         return;
     }
 
-    // 5) Determine focus node ID
-    const focusNode = graph.nodes.find(
-        (n) =>
-            n.label === focusLabel &&
-            (n.folder === focusFolder ||
-                n.folder === relativePosix || // fallback
-                `${n.folder}/${n.label}` === relativePosix)
+    const { graphForView, focusNodeId } = buildFocusedGraph(
+        graph,
+        focusPath,
+        focusLabel,
+        focusFolder,
+        relativePosix
     );
-    const focusNodeId = focusNode?.id ?? null;
-
-    // 5b) Optionally reduce the graph to only the focused node + its direct neighbors
-    let graphForView: GraphResponse = graph;
-    if (focusNodeId) {
-        const neighborIds = new Set<string>();
-        neighborIds.add(focusNodeId);
-
-        // Collect neighbors from edges
-        for (const edge of graph.edges) {
-            if (edge.source === focusNodeId) {
-                neighborIds.add(edge.target);
-            } else if (edge.target === focusNodeId) {
-                neighborIds.add(edge.source);
-            }
-        }
-
-        // Filter nodes and edges to this neighborhood
-        const filteredNodes = graph.nodes.filter((n) => neighborIds.has(n.id));
-        const filteredEdges = graph.edges.filter(
-            (e) => neighborIds.has(e.source) && neighborIds.has(e.target)
-        );
-
-        graphForView = {
-            ...graph,
-            nodes: filteredNodes,
-            edges: filteredEdges
-        };
-    }
 
     const initialData = {
         graph: graphForView,
+        fullGraph: graph,
         focusNodeId
     };
 
@@ -257,20 +279,23 @@ export async function openGraphView(uri?: vscode.Uri): Promise<void> {
                     outputChannel.appendLine(
                         `Webview requested graph refresh for source ${source.id}`
                     );
-                    const refreshedGraph = await getGraph(httpUrl, source.id);
+                    const full = await getGraphWithStatus(httpUrl, source.id);
+                    graphCache.set(source.id, full);
 
-                    const refreshedFocusNode = refreshedGraph.nodes.find(
-                        (n) =>
-                            n.label === focusLabel &&
-                            (n.folder === focusFolder ||
-                                n.folder === relativePosix ||
-                                `${n.folder}/${n.label}` === relativePosix)
-                    );
+                    const { graphForView, focusNodeId: refreshedFocusId } =
+                        buildFocusedGraph(
+                            full,
+                            focusPath,
+                            focusLabel,
+                            focusFolder,
+                            relativePosix
+                        );
 
                     panel.webview.postMessage({
                         type: 'graphData',
-                        graph: refreshedGraph,
-                        focusNodeId: refreshedFocusNode?.id ?? null
+                        graph: graphForView,
+                        fullGraph: full,
+                        focusNodeId: refreshedFocusId
                     });
                 } catch (error) {
                     const errorMsg = `Failed to refresh Linggen graph: ${error}`;
