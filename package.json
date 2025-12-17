@@ -2,8 +2,14 @@
   "name": "linggen-vscode",
   "displayName": "Linggen",
   "description": "Linggen integration for VS Code - visualize architecture and enhance LLM workflows",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "publisher": "linggen",
+  "homepage": "https://linggen.dev",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/linggen/linggen-vscode"
+  },
+  "icon": "assets/icon.png",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -11,36 +17,60 @@
     "Other"
   ],
   "main": "./out/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "contributes": {
     "commands": [
       {
-        "command": "linggen.install",
-        "title": "🌀 Linggen: Install Linggen"
+        "command": "linggen.installCli",
+        "title": "🌀 Linggen: Install Linggen CLI"
       },
       {
         "command": "linggen.indexCurrentProject",
         "title": "🌀 Linggen: Index Current Project"
       },
       {
-        "command": "linggen.openGraphView",
-        "title": "🌀 Linggen: Open Graph"
+        "command": "linggen.configureCursorMsp",
+        "title": "🌀 Linggen: Connect to Linggen"
       },
       {
-        "command": "linggen.configureCursorMsp",
-        "title": "🌀 Linggen: Configure Cursor msp.json"
+        "command": "linggen.explainAcrossProjects",
+        "title": "🌀 Linggen: Explain Across Projects"
+      },
+      {
+        "command": "linggen.showGraphInPanel",
+        "title": "🌀 Linggen: Show Graph"
+      },
+      {
+        "command": "linggen.openFrequentPrompts",
+        "title": "🌀 Linggen: Open Frequent Prompts"
+      },
+      {
+        "command": "linggen.pinToMemory",
+        "title": "🌀 Linggen: Pin to Memory"
       }
     ],
     "menus": {
       "explorer/context": [
         {
-          "command": "linggen.openGraphView",
-          "group": "navigation@11"
+          "command": "linggen.showGraphInPanel",
+          "group": "navigation@12"
         }
       ],
       "editor/context": [
         {
-          "command": "linggen.openGraphView",
-          "group": "navigation@11"
+          "command": "linggen.explainAcrossProjects",
+          "group": "navigation@12"
+        },
+        {
+          "command": "linggen.pinToMemory",
+          "when": "editorHasSelection",
+          "group": "navigation@12"
+        },
+        {
+          "command": "linggen.showGraphInPanel",
+          "group": "navigation@13"
         }
       ]
     },
@@ -50,12 +80,43 @@
         "linggen.backend.httpUrl": {
           "type": "string",
           "default": "http://localhost:8787",
-          "description": "Base URL of the Linggen HTTP server (used for UI and MCP, e.g. {httpUrl}/mcp/sse)"
+          "description": "Base URL of the Linggen HTTP server"
+        },
+        "linggen.backend.explainAcrossProjectsEndpoint": {
+          "type": "string",
+          "default": "/api/query",
+          "description": "HTTP path for 'Explain Across Projects'"
+        },
+        "linggen.panel.autoReveal": {
+          "type": "boolean",
+          "default": true,
+          "description": "Auto-reveal panel when results arrive"
+        },
+        "linggen.panel.embedUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Embed URL for Linggen panel (leave empty for native UI)"
+        },
+        "linggen.healthPoll.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Periodically check Linggen server health"
+        },
+        "linggen.healthPoll.intervalMs": {
+          "type": "number",
+          "default": 5000,
+          "minimum": 1000,
+          "description": "Health check interval (ms)"
+        },
+        "linggen.healthPoll.showStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show Linggen status in status bar"
         },
         "linggen.installUrl": {
           "type": "string",
           "default": "https://linggen.dev",
-          "description": "URL to open for Linggen installation instructions"
+          "description": "URL for Linggen installation instructions"
         }
       }
     }

@@ -152,13 +152,24 @@ export function findResourceForPath(
     resources: Resource[],
     fsPath: string
 ): Resource | undefined {
-    // Prefer the resource with the longest matching prefix
+    // Prefer the resource with the longest matching prefix.
+    // NOTE: Use prefix-length, not max(path lengths). Using max(...) can lead to ties
+    // for file paths (because fsPath is often longer than any resource path),
+    // causing us to pick an arbitrary first match.
     let best: Resource | undefined;
     let bestLen = -1;
 
     for (const r of resources) {
-        if (fsPath.startsWith(r.path) || r.path.startsWith(fsPath)) {
-            const len = Math.max(r.path.length, fsPath.length);
+        if (fsPath.startsWith(r.path)) {
+            // Resource path is a prefix of the target path; prefer longer resource paths.
+            const len = r.path.length;
+            if (len > bestLen) {
+                best = r;
+                bestLen = len;
+            }
+        } else if (r.path.startsWith(fsPath)) {
+            // Target path is a prefix of the resource path; prefer longer target paths.
+            const len = fsPath.length;
             if (len > bestLen) {
                 best = r;
                 bestLen = len;

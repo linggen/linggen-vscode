@@ -10,19 +10,29 @@ suite('Linggen Extension Test Suite', () => {
 
     test('Commands should be registered', async () => {
         const commands = await vscode.commands.getCommands(true);
-        
-        assert.ok(commands.includes('linggen.install'), 'linggen.install command should be registered');
-        assert.ok(commands.includes('linggen.start'), 'linggen.start command should be registered');
-        assert.ok(commands.includes('linggen.indexCurrentProject'), 'linggen.indexCurrentProject command should be registered');
-        assert.ok(commands.includes('linggen.openInLinggen'), 'linggen.openInLinggen command should be registered');
-        assert.ok(commands.includes('linggen.configureCursorMsp'), 'linggen.configureCursorMsp command should be registered');
+
+        // Installer command (runs in terminal after confirmation)
+        assert.ok(
+            commands.includes('linggen.installCli'),
+            'linggen.installCli command should be registered'
+        );
+        assert.ok(
+            commands.includes('linggen.indexCurrentProject'),
+            'linggen.indexCurrentProject command should be registered'
+        );
+        assert.ok(
+            commands.includes('linggen.openGraphView'),
+            'linggen.openGraphView command should be registered'
+        );
+        assert.ok(
+            commands.includes('linggen.configureCursorMsp'),
+            'linggen.configureCursorMsp command should be registered'
+        );
     });
 
     test('Configuration should have expected properties', () => {
         const config = vscode.workspace.getConfiguration('linggen');
-        
-        assert.ok(config.has('backend.mode'), 'Should have backend.mode config');
-        assert.ok(config.has('backend.cliPath'), 'Should have backend.cliPath config');
+
         assert.ok(config.has('backend.httpUrl'), 'Should have backend.httpUrl config');
         assert.ok(config.has('installUrl'), 'Should have installUrl config');
     });

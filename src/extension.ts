@@ -1,25 +1,45 @@
 import * as vscode from 'vscode';
 import { getOutputChannel, disposeOutputChannel } from './output';
-import { installLinggen } from './commands/install';
+import { installLinggenCli } from './commands/install';
 import { indexCurrentProject } from './commands/indexCurrentProject';
-import { openGraphView } from './commands/openGraphView';
 import { configureCursorMsp } from './commands/configureCursorMsp';
+import { startLinggenHealthMonitor } from './linggenMonitor';
+import { explainAcrossProjects, getExplainProvider } from './commands/explainAcrossProjects';
+import { showGraphInPanel } from './commands/showGraphInPanel';
+import { openFrequentPrompts } from './commands/openFrequentPrompts';
+import { pinToMemory } from './commands/pinToMemory';
 
 export function activate(context: vscode.ExtensionContext): void {
     const outputChannel = getOutputChannel();
     outputChannel.appendLine('Linggen extension activated');
 
+    // In-memory provider for explain results (does not write .linggen files)
     context.subscriptions.push(
-        vscode.commands.registerCommand('linggen.install', () => installLinggen()),
+        vscode.workspace.registerTextDocumentContentProvider('linggen-explain', getExplainProvider())
+    );
+
+    // Register commands
+    context.subscriptions.push(
+        vscode.commands.registerCommand('linggen.installCli', () => installLinggenCli()),
         vscode.commands.registerCommand('linggen.indexCurrentProject', () =>
             indexCurrentProject()
         ),
-        vscode.commands.registerCommand('linggen.openGraphView', (uri?: vscode.Uri) =>
-            openGraphView(uri)
-        ),
         vscode.commands.registerCommand('linggen.configureCursorMsp', () =>
-            configureCursorMsp()
-        )
+            configureCursorMsp(context)
+        ),
+        vscode.commands.registerTextEditorCommand('linggen.explainAcrossProjects', (editor) =>
+            explainAcrossProjects(editor)
+        ),
+        vscode.commands.registerTextEditorCommand('linggen.pinToMemory', (editor) =>
+            pinToMemory(editor)
+        ),
+        vscode.commands.registerCommand('linggen.showGraphInPanel', (uri?: vscode.Uri) =>
+            showGraphInPanel(uri)
+        ),
+        vscode.commands.registerCommand('linggen.openFrequentPrompts', () =>
+            openFrequentPrompts(context)
+        ),
+        startLinggenHealthMonitor(context)
     );
 }
 

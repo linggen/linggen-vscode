@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { getOutputChannel } from '../output';
 import { checkServerHealth } from '../helpers';
+import { installLinggen, installLinggenCli } from './install';
 import {
     getOrCreateLocalResourceForWorkspace,
     listJobs,
@@ -30,9 +31,16 @@ export async function indexCurrentProject(): Promise<void> {
     if (!isRunning) {
         const errorMsg = `Linggen server is not reachable at ${httpUrl}. Cannot index project.`;
         outputChannel.appendLine(errorMsg);
-        vscode.window.showErrorMessage(
-            errorMsg + '\n\nPlease start Linggen and try again.'
+        const action = await vscode.window.showErrorMessage(
+            errorMsg + '\n\nLinggen is required. Install/start Linggen and try again.',
+            'Install Linggen CLI',
+            'Open install website'
         );
+        if (action === 'Install Linggen CLI') {
+            await installLinggenCli();
+        } else if (action === 'Open install website') {
+            await installLinggen();
+        }
         return;
     }
 
