@@ -1,8 +1,8 @@
 {
   "name": "linggen-vscode",
   "displayName": "Linggen",
-  "description": "Linggen integration for VS Code - visualize architecture and enhance LLM workflows",
-  "version": "0.3.0",
+  "description": "Your local-first memory layer for vibe coding. Index your projects, documents, and notes on your own machine, then search and chat with AI – with your data staying completely local.",
+  "version": "0.3.2",
   "publisher": "linggen",
   "homepage": "https://linggen.dev",
   "repository": {
