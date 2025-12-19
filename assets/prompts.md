@@ -20,9 +20,9 @@ Rules:
 - If you think something should be saved as memory, propose a memory draft first and ask for my confirmation before calling `memory.create`.
 - Always cite where each fact came from (memory id/title or source/file).
 
-## Prompt 2 — Save summary to memory
+## Crystallize today’s engineering knowledge
 
-Save summary to Linggen memory.
+Transform current insights, architectural decisions, and key learnings into persistent Linggen memory.
 
 1. First, produce a “Memory Draft” with:
 

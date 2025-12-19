@@ -44,12 +44,12 @@ async function waitForMcpReady(url: string, attempts: number, intervalMs: number
 function tryRegisterOrRefreshCursorMcpRegistration(
     linggenMcpUrl: string,
     mode: 'register' | 'refresh'
-): void {
+): boolean {
     const cursorMcp = (vscode as unknown as { cursor?: { mcp?: CursorMcpApi } }).cursor?.mcp;
     const registerServer = cursorMcp?.registerServer;
     const unregisterServer = cursorMcp?.unregisterServer;
     if (typeof registerServer !== 'function') {
-        return;
+        return false;
     }
 
     try {
@@ -57,11 +57,13 @@ function tryRegisterOrRefreshCursorMcpRegistration(
             unregisterServer(MCP_SERVER_NAME);
         }
         registerServer({ name: MCP_SERVER_NAME, server: { url: linggenMcpUrl } });
+        return true;
     } catch (e) {
         // Best-effort only; avoid noisy popups from background polling.
         getOutputChannel().appendLine(
             `Failed to ${mode === 'refresh' ? 'refresh' : 'register'} Cursor MCP: ${String(e)}`
         );
+        return false;
     }
 }
 
@@ -161,22 +163,34 @@ export function startLinggenHealthMonitor(
                         return;
                     }
 
+                    let success = false;
                     if (configured) {
                         // Refresh: unregister+register. A second refresh a moment later helps some clients exit "loading tools".
-                        tryRegisterOrRefreshCursorMcpRegistration(linggenMcpUrl, 'refresh');
-                        await new Promise((r) => setTimeout(r, 1500));
-                        tryRegisterOrRefreshCursorMcpRegistration(linggenMcpUrl, 'refresh');
+                        success = tryRegisterOrRefreshCursorMcpRegistration(linggenMcpUrl, 'refresh');
+                        if (success) {
+                            await new Promise((r) => setTimeout(r, 1500));
+                            tryRegisterOrRefreshCursorMcpRegistration(linggenMcpUrl, 'refresh');
+                        }
                     } else {
                         // First-time register: don't unregister (can cause some clients to spin in "loading tools").
-                        tryRegisterOrRefreshCursorMcpRegistration(linggenMcpUrl, 'register');
+                        success = tryRegisterOrRefreshCursorMcpRegistration(linggenMcpUrl, 'register');
                     }
 
-                    // Mark configured so future runs treat this as connected.
-                    setMcpConfigured(context, true);
+                    if (success) {
+                        // Mark configured so future runs treat this as connected.
+                        setMcpConfigured(context, true);
+                    } else {
+                        output.appendLine(
+                            'Cursor MCP Extension API not available; programmatic registration skipped.'
+                        );
+                        // If not successful, we don't set MCP_CONFIGURED_KEY so we'll try again next time health changes.
+                    }
                 } finally {
                     mcpRegisterInFlight = false;
                 }
             };
+
+            const configured = context.globalState.get<boolean>(MCP_CONFIGURED_KEY, false);
 
             if (lastHealthy === undefined) {
                 lastHealthy = ok;
@@ -194,6 +208,10 @@ export function startLinggenHealthMonitor(
                 if (ok) {
                     void ensureMcpRegisteredOrRefreshed();
                 }
+            } else if (ok && !configured) {
+                // If we are healthy but not yet configured, it means a previous attempt (e.g. on startup) 
+                // might have failed because the Cursor API wasn't ready yet. Retry.
+                void ensureMcpRegisteredOrRefreshed();
             }
         };
 
@@ -223,5 +241,3 @@ export function startLinggenHealthMonitor(
         }
     });
 }
-
-
