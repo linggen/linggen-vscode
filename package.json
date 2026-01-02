@@ -49,9 +49,22 @@
       {
         "command": "linggen.pinToMemory",
         "title": "🌀 Linggen: Pin to Memory"
+      },
+      {
+        "command": "linggen.openMemory",
+        "title": "🌀 Linggen: Open Memory"
       }
     ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "linggen.pinToMemory"
+        },
+        {
+          "command": "linggen.openMemory",
+          "when": "false"
+        }
+      ],
       "explorer/context": [
         {
           "command": "linggen.showGraphInPanel",
@@ -65,7 +78,6 @@
         },
         {
           "command": "linggen.pinToMemory",
-          "when": "editorHasSelection",
           "group": "navigation@12"
         },
         {

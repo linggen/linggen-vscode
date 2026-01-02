@@ -8,10 +8,17 @@ import { explainAcrossProjects, getExplainProvider } from './commands/explainAcr
 import { showGraphInPanel } from './commands/showGraphInPanel';
 import { openFrequentPrompts } from './commands/openFrequentPrompts';
 import { pinToMemory } from './commands/pinToMemory';
+import { LinggenMemoryProvider, openMemory } from './linggenMemoryProvider';
 
 export function activate(context: vscode.ExtensionContext): void {
     const outputChannel = getOutputChannel();
     outputChannel.appendLine('Linggen extension activated');
+
+    const memoryProvider = new LinggenMemoryProvider();
+    context.subscriptions.push(
+        vscode.languages.registerCodeLensProvider({ scheme: 'file' }, memoryProvider),
+        vscode.languages.registerInlayHintsProvider({ scheme: 'file' }, memoryProvider)
+    );
 
     // In-memory provider for explain results (does not write .linggen files)
     context.subscriptions.push(
@@ -32,6 +39,9 @@ export function activate(context: vscode.ExtensionContext): void {
         ),
         vscode.commands.registerTextEditorCommand('linggen.pinToMemory', (editor) =>
             pinToMemory(editor)
+        ),
+        vscode.commands.registerCommand('linggen.openMemory', (hash: string) =>
+            openMemory(hash)
         ),
         vscode.commands.registerCommand('linggen.showGraphInPanel', (uri?: vscode.Uri) =>
             showGraphInPanel(uri)

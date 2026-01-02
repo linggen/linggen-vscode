@@ -22,15 +22,15 @@ export function getExplainHtml(result: {
     text: string;
     fullText?: string;
     meta?: {
-        file_path?: string;
-        start_line?: number;
-        end_line?: number;
+        filePath?: string;
+        startLine?: number;
+        endLine?: number;
     };
 }, webview: vscode.Webview): string {
     const displayText = result.fullText ?? result.text;
     const meta = result.meta;
-    const fileInfo = meta?.file_path
-        ? `${meta.file_path}${meta.start_line ? `:${meta.start_line}` : ''}${meta.end_line && meta.end_line !== meta.start_line ? `-${meta.end_line}` : ''}`
+    const fileInfo = meta?.filePath
+        ? `${meta.filePath}${meta.startLine ? `:${meta.startLine}` : ''}${meta.endLine && meta.endLine !== meta.startLine ? `-${meta.endLine}` : ''}`
         : '';
     const nonce = getNonce();
     const cspSource = webview.cspSource;
