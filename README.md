@@ -25,7 +25,7 @@ linggen
 - **`Linggen: Index Current Project`**: tells Linggen to index the current workspace.
 - **`Linggen: Connect to Linggen`**: Connect Cursor to Linggen MCP server.
 - **`Linggen: Explain Across Projects`**: right-click in the editor to send the context to Linggen and get an editable markdown explanation with related memories.
-- **`Linggen: Pin to Memory`**: select code → right-click to save a snippet with your notes into Linggen's memory layer (`.linggen/memory/`).
+- **`Linggen: Pin to Memory`**: anchor you code to memory (`.linggen/memory/`).
 - **`Linggen: Open Frequent Prompts`**: opens editable prompt templates for common AI workflows.
 - **`Linggen: Show Graph`**: shows a lightweight dependency graph visualization.
 
