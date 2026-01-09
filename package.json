@@ -43,8 +43,8 @@
         "title": "🌀 Linggen: Show Graph"
       },
       {
-        "command": "linggen.openFrequentPrompts",
-        "title": "🌀 Linggen: Open Frequent Prompts"
+        "command": "linggen.openLibrary",
+        "title": "🌀 Linggen: Library"
       },
       {
         "command": "linggen.pinToMemory",
@@ -53,6 +53,16 @@
       {
         "command": "linggen.openMemory",
         "title": "🌀 Linggen: Open Memory"
+      },
+      {
+        "command": "linggen.bootstrapRules",
+        "title": "🌀 Linggen: Bootstrap Cursor Rules"
+      }
+    ],
+    "submenus": [
+      {
+        "id": "linggen.menu",
+        "label": "🌀 Linggen"
       }
     ],
     "menus": {
@@ -61,28 +71,41 @@
           "command": "linggen.pinToMemory"
         },
         {
+          "command": "linggen.openLibrary"
+        },
+        {
           "command": "linggen.openMemory",
           "when": "false"
         }
       ],
       "explorer/context": [
         {
-          "command": "linggen.showGraphInPanel",
+          "submenu": "linggen.menu",
           "group": "navigation@12"
         }
       ],
       "editor/context": [
         {
-          "command": "linggen.explainAcrossProjects",
+          "submenu": "linggen.menu",
           "group": "navigation@12"
+        }
+      ],
+      "linggen.menu": [
+        {
+          "command": "linggen.explainAcrossProjects",
+          "group": "navigation@1"
         },
         {
           "command": "linggen.pinToMemory",
-          "group": "navigation@12"
+          "group": "navigation@2"
         },
         {
           "command": "linggen.showGraphInPanel",
-          "group": "navigation@13"
+          "group": "navigation@3"
+        },
+        {
+          "command": "linggen.openLibrary",
+          "group": "navigation@4"
         }
       ]
     },
@@ -98,6 +121,16 @@
           "type": "string",
           "default": "/api/query",
           "description": "HTTP path for 'Explain Across Projects'"
+        },
+        "linggen.backend.libraryListEndpoint": {
+          "type": "string",
+          "default": "/api/library/packs",
+          "description": "HTTP path for 'Library List'"
+        },
+        "linggen.backend.libraryReadEndpoint": {
+          "type": "string",
+          "default": "/api/library/packs",
+          "description": "HTTP path for 'Library Read'"
         },
         "linggen.panel.autoReveal": {
           "type": "boolean",

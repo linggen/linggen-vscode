@@ -4,15 +4,19 @@ import { installLinggenCli } from './commands/install';
 import { indexCurrentProject } from './commands/indexCurrentProject';
 import { configureCursorMsp } from './commands/configureCursorMsp';
 import { startLinggenHealthMonitor } from './linggenMonitor';
+import { bootstrapRules } from './commands/bootstrapRules';
 import { explainAcrossProjects, getExplainProvider } from './commands/explainAcrossProjects';
 import { showGraphInPanel } from './commands/showGraphInPanel';
-import { openFrequentPrompts } from './commands/openFrequentPrompts';
+import { openLibrary } from './commands/openLibrary';
 import { pinToMemory } from './commands/pinToMemory';
 import { LinggenMemoryProvider, openMemory } from './linggenMemoryProvider';
 
 export function activate(context: vscode.ExtensionContext): void {
     const outputChannel = getOutputChannel();
     outputChannel.appendLine('Linggen extension activated');
+
+    // Bootstrap Cursor Rules automatically on project open
+    void bootstrapRules(context);
 
     const memoryProvider = new LinggenMemoryProvider();
     context.subscriptions.push(
@@ -46,8 +50,11 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('linggen.showGraphInPanel', (uri?: vscode.Uri) =>
             showGraphInPanel(uri)
         ),
-        vscode.commands.registerCommand('linggen.openFrequentPrompts', () =>
-            openFrequentPrompts(context)
+        vscode.commands.registerCommand('linggen.openLibrary', () =>
+            openLibrary()
+        ),
+        vscode.commands.registerCommand('linggen.bootstrapRules', () =>
+            bootstrapRules(context)
         ),
         startLinggenHealthMonitor(context)
     );
