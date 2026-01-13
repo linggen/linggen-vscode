@@ -53,9 +53,6 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('linggen.openLibrary', () =>
             openLibrary()
         ),
-        vscode.commands.registerCommand('linggen.bootstrapRules', () =>
-            bootstrapRules(context)
-        ),
         startLinggenHealthMonitor(context)
     );
 }

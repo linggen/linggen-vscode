@@ -53,10 +53,6 @@
       {
         "command": "linggen.openMemory",
         "title": "🌀 Linggen: Open Memory"
-      },
-      {
-        "command": "linggen.bootstrapRules",
-        "title": "🌀 Linggen: Bootstrap Cursor Rules"
       }
     ],
     "submenus": [
