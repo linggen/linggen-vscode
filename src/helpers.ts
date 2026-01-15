@@ -2,6 +2,25 @@ import * as crypto from 'crypto';
 import { getOutputChannel } from './output';
 
 /**
+ * Helper: Check if a URL refers to a local server.
+ */
+export function isLocalServer(httpUrl: string): boolean {
+    try {
+        const url = new URL(httpUrl);
+        const hostname = url.hostname.toLowerCase();
+        return (
+            hostname === 'localhost' ||
+            hostname === '127.0.0.1' ||
+            hostname === '0.0.0.0' ||
+            hostname === '[::1]' ||
+            hostname.endsWith('.local')
+        );
+    } catch {
+        return false;
+    }
+}
+
+/**
  * Helper: Check if Linggen server is healthy via /api/status.
  */
 export async function checkServerHealth(httpUrl: string): Promise<boolean> {

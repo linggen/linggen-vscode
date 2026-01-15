@@ -2,7 +2,7 @@
   "name": "linggen-vscode",
   "displayName": "Linggen",
   "description": "Your local-first memory layer for vibe coding. Index your projects, documents, and notes on your own machine, then search and chat with AI – with your data staying completely local.",
-  "version": "0.5.0",
+  "version": "0.5.3",
   "publisher": "linggen",
   "homepage": "https://linggen.dev",
   "repository": {
@@ -24,15 +24,12 @@
     "commands": [
       {
         "command": "linggen.installCli",
-        "title": "🌀 Linggen: Install Linggen CLI"
+        "title": "🌀 Linggen: Install/Update Linggen (Local)",
+        "description": "Install or update Linggen CLI, server and app for local use"
       },
       {
         "command": "linggen.indexCurrentProject",
         "title": "🌀 Linggen: Index Current Project"
-      },
-      {
-        "command": "linggen.configureCursorMsp",
-        "title": "🌀 Linggen: Connect to Linggen"
       },
       {
         "command": "linggen.explainAcrossProjects",
@@ -63,6 +60,10 @@
     ],
     "menus": {
       "commandPalette": [
+        {
+          "command": "linggen.installCli",
+          "when": "!config.linggen.remoteTeamMode && linggen.isLocalServer"
+        },
         {
           "command": "linggen.pinToMemory"
         },
@@ -158,6 +159,11 @@
           "type": "string",
           "default": "https://linggen.dev",
           "description": "URL for Linggen installation instructions"
+        },
+        "linggen.remoteTeamMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable remote team mode (hides local installation commands)"
         }
       }
     }

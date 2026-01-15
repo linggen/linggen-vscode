@@ -21,12 +21,20 @@ suite('Linggen Extension Test Suite', () => {
             'linggen.indexCurrentProject command should be registered'
         );
         assert.ok(
-            commands.includes('linggen.openGraphView'),
-            'linggen.openGraphView command should be registered'
+            commands.includes('linggen.explainAcrossProjects'),
+            'linggen.explainAcrossProjects command should be registered'
         );
         assert.ok(
-            commands.includes('linggen.configureCursorMsp'),
-            'linggen.configureCursorMsp command should be registered'
+            commands.includes('linggen.showGraphInPanel'),
+            'linggen.showGraphInPanel command should be registered'
+        );
+        assert.ok(
+            commands.includes('linggen.openLibrary'),
+            'linggen.openLibrary command should be registered'
+        );
+        assert.ok(
+            commands.includes('linggen.pinToMemory'),
+            'linggen.pinToMemory command should be registered'
         );
     });
 

@@ -1,22 +1,31 @@
 import * as vscode from 'vscode';
 
-const MEMORY_REGEX = /linggen memory: ([\w-]+)/g;
+const MEMORY_REGEX = /linggen memory: ([\w\.-]+)/g;
 
 /**
- * Finds a memory file by its internal ID in the frontmatter.
+ * Finds a memory file by its internal ID or filename.
+ * Searches recursively in .linggen/memory/ to support subfolders (e.g. official/).
  */
 async function findFileById(workspaceFolder: vscode.WorkspaceFolder, id: string): Promise<vscode.Uri | undefined> {
-    const memoryDir = vscode.Uri.joinPath(workspaceFolder.uri, '.linggen', 'memory');
     try {
-        const files = await vscode.workspace.fs.readDirectory(memoryDir);
-        for (const [name, type] of files) {
-            if (type === vscode.FileType.File && name.endsWith('.md')) {
-                const fileUri = vscode.Uri.joinPath(memoryDir, name);
-                const data = await vscode.workspace.fs.readFile(fileUri);
-                const text = new TextDecoder().decode(data);
-                if (text.includes(`id: ${id}`)) {
-                    return fileUri;
-                }
+        // Use findFiles for recursive search
+        const pattern = new vscode.RelativePattern(workspaceFolder, '.linggen/memory/**/*.md');
+        const files = await vscode.workspace.findFiles(pattern);
+        
+        for (const fileUri of files) {
+            const fileName = fileUri.path.split('/').pop() || '';
+            const nameWithoutExt = fileName.replace(/\.md$/, '');
+            
+            // 1. Check if filename matches ID (e.g. test.md or test or <name>-<ID>.md)
+            if (fileName === id || nameWithoutExt === id || nameWithoutExt.endsWith(`-${id}`) || nameWithoutExt.endsWith(`-${id.substring(0, 4)}`)) {
+                return fileUri;
+            }
+
+            // 2. Fallback: check content for id: (legacy support if id still exists)
+            const data = await vscode.workspace.fs.readFile(fileUri);
+            const text = new TextDecoder().decode(data);
+            if (text.includes(`id: ${id}`)) {
+                return fileUri;
             }
         }
     } catch {
@@ -33,14 +42,15 @@ export async function openMemory(hash: string): Promise<void> {
 
     for (const folder of workspaceFolders) {
         // 1. Try direct filename match first (fastest)
-        const directUri = vscode.Uri.joinPath(folder.uri, '.linggen', 'memory', `${hash}.md`);
+        const fileName = hash.toLowerCase().endsWith('.md') ? hash : `${hash}.md`;
+        const directUri = vscode.Uri.joinPath(folder.uri, '.linggen', 'memory', fileName);
         try {
             await vscode.workspace.fs.stat(directUri);
             const doc = await vscode.workspace.openTextDocument(directUri);
             await vscode.window.showTextDocument(doc);
             return;
         } catch {
-            // Not found by filename, try searching by content ID
+            // Not found by filename, try searching recursively
             const foundUri = await findFileById(folder, hash);
             if (foundUri) {
                 const doc = await vscode.workspace.openTextDocument(foundUri);
@@ -50,7 +60,7 @@ export async function openMemory(hash: string): Promise<void> {
         }
     }
 
-    vscode.window.showErrorMessage(`Linggen memory for ID ${hash} not found.`);
+    vscode.window.showErrorMessage(`Linggen memory for identifier ${hash} not found.`);
 }
 
 export class LinggenMemoryProvider implements vscode.CodeLensProvider, vscode.InlayHintsProvider {
@@ -75,7 +85,8 @@ export class LinggenMemoryProvider implements vscode.CodeLensProvider, vscode.In
             
             // Try to find the name for a better title
             if (workspaceFolder) {
-                let fileUri: vscode.Uri | undefined = vscode.Uri.joinPath(workspaceFolder.uri, '.linggen', 'memory', `${hash}.md`);
+                const fileName = hash.toLowerCase().endsWith('.md') ? hash : `${hash}.md`;
+                let fileUri: vscode.Uri | undefined = vscode.Uri.joinPath(workspaceFolder.uri, '.linggen', 'memory', fileName);
                 try {
                     try {
                         await vscode.workspace.fs.stat(fileUri);
@@ -121,7 +132,8 @@ export class LinggenMemoryProvider implements vscode.CodeLensProvider, vscode.In
             const pos = document.positionAt(document.offsetAt(range.start) + match.index + match[0].length);
             const lineEnd = document.lineAt(pos.line).range.end;
 
-            let fileUri: vscode.Uri | undefined = vscode.Uri.joinPath(workspaceFolder.uri, '.linggen', 'memory', `${hash}.md`);
+            const fileName = hash.toLowerCase().endsWith('.md') ? hash : `${hash}.md`;
+            let fileUri: vscode.Uri | undefined = vscode.Uri.joinPath(workspaceFolder.uri, '.linggen', 'memory', fileName);
             try {
                 // Check if file exists by name, if not, find by ID
                 try {

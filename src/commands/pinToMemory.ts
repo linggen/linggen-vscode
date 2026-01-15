@@ -1,37 +1,40 @@
 import * as vscode from 'vscode';
-import { generateHash, getCommentSyntax } from '../helpers';
+import { getCommentSyntax } from '../helpers';
 
 interface MemoryItem extends vscode.QuickPickItem {
     id?: string;
     isNew?: boolean;
 }
 
-async function listMemories(dirUri: vscode.Uri): Promise<MemoryItem[]> {
+async function listMemories(workspaceFolder: vscode.WorkspaceFolder): Promise<MemoryItem[]> {
     const items: MemoryItem[] = [];
     try {
-        const files = await vscode.workspace.fs.readDirectory(dirUri);
-        for (const [fileName, type] of files) {
-            if (type === vscode.FileType.File && fileName.endsWith('.md')) {
-                const fileUri = vscode.Uri.joinPath(dirUri, fileName);
-                const data = await vscode.workspace.fs.readFile(fileUri);
-                const text = new TextDecoder().decode(data);
-                
-                const idMatch = text.match(/id:\s*([a-f0-9]+)/);
-                const nameMatch = text.match(/name:\s*(.*)/);
-                const summaryMatch = text.match(/summary:\s*(.*)/);
-                
-                if (idMatch) {
-                    const name = nameMatch ? nameMatch[1].trim() : (summaryMatch ? summaryMatch[1].trim() : fileName);
-                    const summary = summaryMatch ? summaryMatch[1].trim() : '';
-                    
-                    items.push({
-                        label: `$(markdown) ${name}`,
-                        description: summary,
-                        detail: idMatch[1],
-                        id: idMatch[1]
-                    });
-                }
-            }
+        const pattern = new vscode.RelativePattern(workspaceFolder, '.linggen/memory/**/*.md');
+        const files = await vscode.workspace.findFiles(pattern);
+        
+        for (const fileUri of files) {
+            const data = await vscode.workspace.fs.readFile(fileUri);
+            const text = new TextDecoder().decode(data);
+            
+            const idMatch = text.match(/id:\s*([a-f0-9]+)/);
+            const nameMatch = text.match(/name:\s*(.*)/);
+            const summaryMatch = text.match(/summary:\s*(.*)/);
+            
+            // Extract identifier for the comment. 
+            // We now prefer using the filename (e.g. test.md) as the reference.
+            const fileName = fileUri.path.split('/').pop() || '';
+            const id = fileName; 
+
+            const nameWithoutExt = fileName.replace(/\.md$/, '');
+            const name = nameMatch ? nameMatch[1].trim() : (summaryMatch ? summaryMatch[1].trim() : nameWithoutExt);
+            const summary = summaryMatch ? summaryMatch[1].trim() : '';
+            
+            items.push({
+                label: `$(markdown) ${name}`,
+                description: summary,
+                detail: id,
+                id: id
+            });
         }
     } catch {
         // Directory might not exist yet
@@ -54,8 +57,7 @@ export async function pinToMemory(editor: vscode.TextEditor): Promise<void> {
 
     const sel = editor.selection;
 
-    const dirUri = vscode.Uri.joinPath(workspaceFolder.uri, '.linggen', 'memory');
-    const existingMemories = await listMemories(dirUri);
+    const existingMemories = await listMemories(workspaceFolder);
 
     const quickPick = vscode.window.createQuickPick<MemoryItem>();
     quickPick.title = 'Linggen: Pin to Memory';
@@ -89,8 +91,6 @@ export async function pinToMemory(editor: vscode.TextEditor): Promise<void> {
         return;
     }
 
-    let hash: string;
-
     if (selected.isNew) {
         let memoryName = quickPick.value.trim();
         
@@ -108,16 +108,23 @@ export async function pinToMemory(editor: vscode.TextEditor): Promise<void> {
         }
 
         const code = sel.isEmpty ? '' : doc.getText(sel);
-        hash = generateHash(code + Date.now().toString());
-        const fileUri = vscode.Uri.joinPath(dirUri, `${(memoryName.trim() || 'memory').replace(/[^\w.-]+/g, '_')}-${hash.substring(0, 4)}.md`);
+        const dirUri = vscode.Uri.joinPath(workspaceFolder.uri, '.linggen', 'memory');
+        
+        // Use user input as filename directly, sanitized.
+        let baseName = (memoryName.trim() || 'memory').replace(/[^\w.-]+/g, '_');
+        if (!baseName.toLowerCase().endsWith('.md')) {
+            baseName += '.md';
+        }
+        
+        const fileUri = vscode.Uri.joinPath(dirUri, baseName);
+        const referenceId = baseName;
 
         await vscode.workspace.fs.createDirectory(dirUri);
 
         const templateLines = [
             '---',
-            `id: ${hash}`,
-            `scope: ${doc.languageId || 'text'}`,
             `name: ${memoryName.trim() || 'Untitled'}`,
+            `scope: ${doc.languageId || 'text'}`,
             'summary: ',
             'tags: []',
             '---',
@@ -140,37 +147,53 @@ export async function pinToMemory(editor: vscode.TextEditor): Promise<void> {
         
         // Insert comment into the editor BEFORE opening the new file
         const { prefix, suffix } = getCommentSyntax(doc.languageId);
+        const commentBase = `linggen memory: ${referenceId}`;
         const comment = suffix 
-            ? `${prefix} linggen memory: ${hash} ${suffix}\n`
-            : `${prefix} linggen memory: ${hash}\n`;
+            ? `${prefix} ${commentBase} ${suffix}`
+            : `${prefix} ${commentBase}`;
         
         await editor.edit(editBuilder => {
             const line = doc.lineAt(sel.start.line);
+            const isLineEmpty = line.text.trim() === '';
             const indent = line.text.substring(0, line.firstNonWhitespaceCharacterIndex);
-            editBuilder.insert(new vscode.Position(sel.start.line, 0), indent + comment);
+            
+            if (isLineEmpty) {
+                // Replace the empty line or insert at the beginning
+                editBuilder.replace(line.range, indent + comment);
+            } else {
+                // Insert a new line above
+                editBuilder.insert(new vscode.Position(sel.start.line, 0), indent + comment + '\n');
+            }
         });
 
         // Open the newly created file for editing
         const memoryDoc = await vscode.workspace.openTextDocument(fileUri);
         await vscode.window.showTextDocument(memoryDoc, vscode.ViewColumn.Active);
         
-        vscode.window.showInformationMessage(`Linggen: created and opened memory template (${hash}).`);
+        vscode.window.showInformationMessage(`Linggen: created and opened memory template (${referenceId}).`);
     } else {
-        hash = selected.id!;
+        const referenceId = selected.id!;
         
         // Insert comment for existing memory
         const { prefix, suffix } = getCommentSyntax(doc.languageId);
+        const commentBase = `linggen memory: ${referenceId}`;
         const comment = suffix 
-            ? `${prefix} linggen memory: ${hash} ${suffix}\n`
-            : `${prefix} linggen memory: ${hash}\n`;
+            ? `${prefix} ${commentBase} ${suffix}`
+            : `${prefix} ${commentBase}`;
         
         await editor.edit(editBuilder => {
             const line = doc.lineAt(sel.start.line);
+            const isLineEmpty = line.text.trim() === '';
             const indent = line.text.substring(0, line.firstNonWhitespaceCharacterIndex);
-            editBuilder.insert(new vscode.Position(sel.start.line, 0), indent + comment);
+            
+            if (isLineEmpty) {
+                editBuilder.replace(line.range, indent + comment);
+            } else {
+                editBuilder.insert(new vscode.Position(sel.start.line, 0), indent + comment + '\n');
+            }
         });
         
-        vscode.window.showInformationMessage(`Linggen: linked to memory (${hash}).`);
+        vscode.window.showInformationMessage(`Linggen: linked to memory (${referenceId}).`);
     }
 }
 

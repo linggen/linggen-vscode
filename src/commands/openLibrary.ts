@@ -7,6 +7,9 @@ interface LibraryPack {
     folder?: string;
     description?: string;
     // eslint-disable-next-line @typescript-eslint/naming-convention
+    read_only?: boolean;
+    scope?: string;
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     created_at?: string;
     // eslint-disable-next-line @typescript-eslint/naming-convention
     updated_at?: string;
@@ -21,6 +24,7 @@ interface ManifestItem {
     id: string;
     name: string;
     type: string;
+    readOnly?: boolean;
     installedAt: string;
     sourceUrl: string;
 }
@@ -121,7 +125,7 @@ async function showPacksInFolder(
             folder: '..' // special value to go back
         },
         ...packs.map(pack => ({
-            label: `$(file-code) ${pack.name}`,
+            label: `${pack.read_only ? '$(lock) ' : '$(file-code) '}${pack.name}`,
             description: pack.description || pack.id,
             pack: pack
         }))
@@ -168,7 +172,9 @@ async function installPack(
 ): Promise<void> {
     try {
         // Read pack content
-        const readUrl = `${httpUrl.replace(/\/+$/, '')}${endpoint.startsWith('/') ? '' : '/'}${endpoint}/${pack.id}`;
+        // Encode pack.id because it contains slashes (e.g. official/skills/linggen.md)
+        const encodedId = encodeURIComponent(pack.id);
+        const readUrl = `${httpUrl.replace(/\/+$/, '')}${endpoint.startsWith('/') ? '' : '/'}${endpoint}/${encodedId}`;
         
         const res = await fetch(readUrl);
         if (!res.ok) {
@@ -186,8 +192,22 @@ async function installPack(
         }
         
         // Determine destination folder based on pack folder or name
+        // Backend returns folder like "official/skills" or "skills"
         const folderName = pack.folder || 'general';
-        const destDir = `.linggen/${folderName}`;
+        let destDir = `.linggen/${folderName}`;
+        
+        if (pack.read_only) {
+            // If it's official, we want to store it in .linggen/<type>/official/
+            // e.g. "official/skills" -> ".linggen/skills/official"
+            if (folderName.startsWith('official/')) {
+                const type = folderName.replace('official/', '');
+                destDir = `.linggen/${type}/official`;
+            } else if (folderName === 'official') {
+                destDir = `.linggen/general/official`;
+            } else {
+                destDir = `.linggen/${folderName}/official`;
+            }
+        }
 
         const dirUri = vscode.Uri.joinPath(rootUri, destDir);
         const fileUri = vscode.Uri.joinPath(dirUri, fileName);
@@ -220,6 +240,7 @@ async function updateLibraryManifest(rootUri: vscode.Uri, pack: LibraryPack, htt
         id: pack.id,
         name: pack.name,
         type: pack.folder || 'general',
+        readOnly: pack.read_only,
         installedAt: new Date().toISOString(),
         sourceUrl: httpUrl
     };

@@ -59,6 +59,7 @@ export async function bootstrapRules(context: vscode.ExtensionContext): Promise<
     }
 
     const localSkillPath = path.join(rootPath, '.linggen', 'skills', 'linggen.md');
+    const officialSkillPath = path.join(rootPath, '.linggen', 'skills', 'official', 'linggen.md');
 
     // 1. Check if the rule already exists
     if (fs.existsSync(rulePath)) {
@@ -68,13 +69,15 @@ export async function bootstrapRules(context: vscode.ExtensionContext): Promise<
 
     // 2. Determine the content
     let content = '';
-    if (fs.existsSync(localSkillPath)) {
+    const sourcePath = fs.existsSync(localSkillPath) ? localSkillPath : (fs.existsSync(officialSkillPath) ? officialSkillPath : null);
+    
+    if (sourcePath) {
         // Copy the whole content of the local skill
         try {
-            content = fs.readFileSync(localSkillPath, 'utf8');
-            outputChannel.appendLine(`Found local Linggen skill. Copying content to AI rules.`);
+            content = fs.readFileSync(sourcePath, 'utf8');
+            outputChannel.appendLine(`Found local Linggen skill at ${sourcePath}. Copying content to AI rules.`);
         } catch (error) {
-            outputChannel.appendLine(`Error reading local skill at ${localSkillPath}: ${error}`);
+            outputChannel.appendLine(`Error reading local skill at ${sourcePath}: ${error}`);
         }
     }
 

@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import { getOutputChannel, disposeOutputChannel } from './output';
 import { installLinggenCli } from './commands/install';
 import { indexCurrentProject } from './commands/indexCurrentProject';
-import { configureCursorMsp } from './commands/configureCursorMsp';
 import { startLinggenHealthMonitor } from './linggenMonitor';
 import { bootstrapRules } from './commands/bootstrapRules';
 import { explainAcrossProjects, getExplainProvider } from './commands/explainAcrossProjects';
@@ -34,9 +33,6 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('linggen.installCli', () => installLinggenCli()),
         vscode.commands.registerCommand('linggen.indexCurrentProject', () =>
             indexCurrentProject()
-        ),
-        vscode.commands.registerCommand('linggen.configureCursorMsp', () =>
-            configureCursorMsp(context)
         ),
         vscode.commands.registerTextEditorCommand('linggen.explainAcrossProjects', (editor) =>
             explainAcrossProjects(editor)

@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
-import { checkServerHealth } from './helpers';
+import { checkServerHealth, isLocalServer } from './helpers';
 import { getOutputChannel } from './output';
 
 const MCP_CONFIGURED_KEY = 'linggen.mcpConfigured';
+const CONTEXT_IS_LOCAL_SERVER = 'linggen.isLocalServer';
 
 type CursorMcpApi = {
     registerServer?: (cfg: { name: string; server: { url: string } }) => void;
@@ -91,7 +92,6 @@ export function startLinggenHealthMonitor(
         100
     );
     statusBar.name = 'Linggen';
-    statusBar.command = 'linggen.configureCursorMsp';
     // Visible immediately on startup so users see "loading" while the first health check runs.
     statusBar.text = 'Linggen: $(sync~spin) checking…';
     statusBar.tooltip = 'Linggen: checking server status…';
@@ -133,6 +133,9 @@ export function startLinggenHealthMonitor(
 
         const tick = async () => {
             const ok = await checkServerHealth(baseUrl);
+            
+            // Update context key for "local server" detection
+            void vscode.commands.executeCommand('setContext', CONTEXT_IS_LOCAL_SERVER, isLocalServer(baseUrl));
 
             if (ok) {
                 statusBar.text = 'Linggen: $(check) running';

@@ -24,10 +24,11 @@ export async function installLinggen(): Promise<void> {
 }
 
 /**
- * Command: Linggen: Install Linggen CLI
+ * Command: Linggen: Install/Update Linggen (Local)
  *
  * VS Code extensions cannot silently install software. This command asks for explicit
  * confirmation and then runs the official installer script in an integrated terminal.
+ * Installs or updates CLI, server, and app for local use.
  */
 export async function installLinggenCli(): Promise<void> {
     const outputChannel = getOutputChannel();
@@ -39,7 +40,7 @@ export async function installLinggenCli(): Promise<void> {
     const openWebsiteLabel = `Open ${installUrl}`;
 
     const choice = await vscode.window.showWarningMessage(
-        'Linggen is required for this extension.\n\nThis will run the following commands in an integrated terminal:\n\n' +
+        'Linggen is required for this extension.\n\nThis will install or update the Linggen CLI, server, and app for local use by running:\n\n' +
             `${step1}\n${step2}`,
         { modal: true },
         'Run installer in Terminal',
@@ -48,7 +49,7 @@ export async function installLinggenCli(): Promise<void> {
     );
 
     if (!choice || choice === 'Cancel') {
-        outputChannel.appendLine('Linggen CLI install cancelled by user.');
+        outputChannel.appendLine('Linggen local install/update cancelled by user.');
         return;
     }
 
@@ -57,7 +58,7 @@ export async function installLinggenCli(): Promise<void> {
         return;
     }
 
-    outputChannel.appendLine('Starting Linggen CLI installer in integrated terminal…');
+    outputChannel.appendLine('Starting Linggen local installer/updater in integrated terminal…');
     const terminal = vscode.window.createTerminal({
         name: 'Linggen Installer'
     });
@@ -65,7 +66,7 @@ export async function installLinggenCli(): Promise<void> {
     terminal.sendText(step1, true);
     terminal.sendText(step2, true);
     vscode.window.showInformationMessage(
-        'Linggen install started in the Terminal. When it finishes, start Linggen with: linggen'
+        'Linggen install/update started in the Terminal. When it finishes, you can start using Linggen locally.'
     );
 }
 

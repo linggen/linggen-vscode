@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__linggen__get_status",
+      "mcp__linggen__list_sources"
+    ]
+  }
+}
