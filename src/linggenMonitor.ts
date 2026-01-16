@@ -133,6 +133,7 @@ export function startLinggenHealthMonitor(
 
         const tick = async () => {
             const ok = await checkServerHealth(baseUrl);
+            const mcpEnabled = cfg.get<boolean>('mcp.enabled', false);
             
             // Update context key for "local server" detection
             void vscode.commands.executeCommand('setContext', CONTEXT_IS_LOCAL_SERVER, isLocalServer(baseUrl));
@@ -146,6 +147,9 @@ export function startLinggenHealthMonitor(
             }
 
             const ensureMcpRegisteredOrRefreshed = async () => {
+                if (!mcpEnabled) {
+                    return;
+                }
                 if (mcpRegisterInFlight) {
                     return;
                 }

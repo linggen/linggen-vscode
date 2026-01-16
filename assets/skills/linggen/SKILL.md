@@ -43,12 +43,11 @@ To get a fully context-aware prompt that includes intent detection and applied u
 
 Linggen memories capture architectural decisions and constraints.
 
-- **Search memories:** `bash .claude/skills/linggen/scripts/memory_search_semantic.sh "<query>" [limit] [source_id]`
 - **Memory Anchors:** When you see a comment like `// linggen memory: <filename>.md` in the code, it is an **anchor** to a specific decision. You MUST:
+
   1. Locate the file in `.linggen/memory/<filename>.md`.
   2. Read it immediately to understand the context or constraints for that specific block of code.
-- **Fetch by ID:** If an anchor uses a 10-character ID instead of a filename (e.g., `// linggen memory: 4f7a905824`), run:
-  `bash .claude/skills/linggen/scripts/memory_fetch_by_meta.sh "id" "<ID>"`
+
 - **Global Context:** You can always browse all memories in `.linggen/memory/` to understand the project's evolution.
 
 ### 4. Linggen Library (Remote Packs)

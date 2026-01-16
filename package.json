@@ -164,6 +164,11 @@
           "type": "boolean",
           "default": false,
           "description": "Enable remote team mode (hides local installation commands)"
+        },
+        "linggen.mcp.enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable programmatic registration of Linggen MCP server in Cursor (experimental)"
         }
       }
     }
