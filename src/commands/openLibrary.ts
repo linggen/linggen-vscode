@@ -47,8 +47,8 @@ export async function openLibrary(): Promise<void> {
 
     const config = vscode.workspace.getConfiguration('linggen');
     const httpUrl = config.get<string>('backend.httpUrl', 'http://localhost:8787');
-    const listEndpoint = config.get<string>('backend.libraryListEndpoint', '/api/library/packs');
-    const readEndpoint = config.get<string>('backend.libraryReadEndpoint', '/api/library/packs');
+    const listEndpoint = '/api/library/packs';
+    const readEndpoint = '/api/library/packs';
 
     const isRunning = await checkServerHealth(httpUrl);
     if (!isRunning) {
@@ -142,8 +142,7 @@ async function showPacksInFolder(
 
         if (selection.folder === '..') {
             quickPick.dispose();
-            const config = vscode.workspace.getConfiguration('linggen');
-            const listEndpoint = config.get<string>('backend.libraryListEndpoint', '/api/library/packs');
+            const listEndpoint = '/api/library/packs';
             await showLibraryFolders(httpUrl, listEndpoint, readEndpoint, rootUri);
         } else if (selection.pack) {
             await installPack(selection.pack, httpUrl, readEndpoint, rootUri);

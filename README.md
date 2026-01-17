@@ -1,6 +1,6 @@
 ## Linggen (VS Code Extension)
 
-Linggen is your **local-first memory layer for vibe coding**. This extension connects VS Code to Linggen so you can **index your projects, documents, and notes on your own machine**, then search and chat with AI – with your data staying completely local.
+Linggen is your **AI Tutor and Orchestrator**. It helps you use AI easily by automating the complex parts—context management, skill configuration, and project knowledge. You don't need to care about MCP, skills, or building context manually; Linggen handles it all locally so you can start with AI in seconds.
 
 ### Prerequisite: install Linggen
 
@@ -19,11 +19,17 @@ linggen
 4. Run **`Linggen: Index Current Project`**.
 5. Right-click any file/folder → **`Linggen: Open Graph`** (or run it from the Command Palette).
 
+### What Linggen does for you
+
+- **Automated Context**: No more copying and pasting code. Linggen understands your whole project and provides the right context to your AI agent.
+- **Background Orchestration**: Linggen manages skills and project knowledge so you don't have to learn complex AI configurations.
+- **Local & Private**: All your project data stays on your machine.
+- **Memory Anchors**: Link your code directly to architectural decisions in `.linggen/memory/`.
+
 ### Commands
 
 - **`Linggen: Install Linggen CLI`**: runs the installer steps in an integrated terminal (after confirmation).
 - **`Linggen: Index Current Project`**: tells Linggen to index the current workspace.
-- **`Linggen: Connect to Linggen`**: Connect Cursor to Linggen MCP server.
 - **`Linggen: Explain Across Projects`**: right-click in the editor to send the context to Linggen and get an editable markdown explanation with related memories.
 - **`Linggen: Pin to Memory`**: anchor you code to memory (`.linggen/memory/`).
 - **`Linggen: Library`**: browse and install skills or policies from your Linggen server into your project.
@@ -47,13 +53,9 @@ You can configure the extension in VS Code settings:
 }
 ```
 
-### Cursor integration
+### AI Orchestration
 
-If you're using **Cursor**, run **`Linggen: Connect to Linggen`**.
-
-- In newer Cursor versions, this command will register the Linggen MCP server **programmatically** using Cursor's MCP Extension API (no `.cursor/mcp.json` edits needed).
-- If Linggen starts **after** Cursor, the extension will automatically **retry and refresh** the MCP registration once Linggen becomes reachable.
-- Otherwise, it will fall back to creating/updating `.cursor/mcp.json` (you may need to restart Cursor to apply changes).
+If you're using **Cursor**, Linggen automatically orchestrates the connection in the background. You don't need to manually configure MCP servers or context files—Linggen handles the technical handshake so your AI is instantly smarter.
 
 ### Troubleshooting
 

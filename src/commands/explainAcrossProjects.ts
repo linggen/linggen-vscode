@@ -207,10 +207,7 @@ export async function explainAcrossProjects(editor?: vscode.TextEditor): Promise
 
     const config = vscode.workspace.getConfiguration('linggen');
     const httpUrl = config.get<string>('backend.httpUrl', 'http://localhost:8787');
-    const endpointPath = config.get<string>(
-        'backend.explainAcrossProjectsEndpoint',
-        '/api/query'
-    );
+    const endpointPath = '/api/query';
 
     // Ensure Linggen is reachable
     const isRunning = await checkServerHealth(httpUrl);

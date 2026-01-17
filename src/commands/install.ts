@@ -6,8 +6,7 @@ import { getOutputChannel } from '../output';
  */
 export async function installLinggen(): Promise<void> {
     const outputChannel = getOutputChannel();
-    const config = vscode.workspace.getConfiguration('linggen');
-    const installUrl = config.get<string>('installUrl', 'https://linggen.dev');
+    const installUrl = 'https://linggen.dev';
 
     outputChannel.appendLine(`Opening Linggen installation page: ${installUrl}`);
 

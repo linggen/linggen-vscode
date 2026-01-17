@@ -1,8 +1,8 @@
 {
   "name": "linggen-vscode",
   "displayName": "Linggen",
-  "description": "Your local-first memory layer for vibe coding. Index your projects, documents, and notes on your own machine, then search and chat with AI – with your data staying completely local.",
-  "version": "0.5.3",
+  "description": "The easiest way to use AI. Linggen acts as an AI Tutor and Orchestrator, managing skills, context, and project knowledge in the background so you can just focus on results without the technical setup.",
+  "version": "0.6.0",
   "publisher": "linggen",
   "homepage": "https://linggen.dev",
   "repository": {
@@ -62,7 +62,7 @@
       "commandPalette": [
         {
           "command": "linggen.installCli",
-          "when": "!config.linggen.remoteTeamMode && linggen.isLocalServer"
+          "when": "linggen.isLocalServer"
         },
         {
           "command": "linggen.pinToMemory"
@@ -113,57 +113,6 @@
           "type": "string",
           "default": "http://localhost:8787",
           "description": "Base URL of the Linggen HTTP server"
-        },
-        "linggen.backend.explainAcrossProjectsEndpoint": {
-          "type": "string",
-          "default": "/api/query",
-          "description": "HTTP path for 'Explain Across Projects'"
-        },
-        "linggen.backend.libraryListEndpoint": {
-          "type": "string",
-          "default": "/api/library/packs",
-          "description": "HTTP path for 'Library List'"
-        },
-        "linggen.backend.libraryReadEndpoint": {
-          "type": "string",
-          "default": "/api/library/packs",
-          "description": "HTTP path for 'Library Read'"
-        },
-        "linggen.panel.autoReveal": {
-          "type": "boolean",
-          "default": true,
-          "description": "Auto-reveal panel when results arrive"
-        },
-        "linggen.panel.embedUrl": {
-          "type": "string",
-          "default": "",
-          "description": "Embed URL for Linggen panel (leave empty for native UI)"
-        },
-        "linggen.healthPoll.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Periodically check Linggen server health"
-        },
-        "linggen.healthPoll.intervalMs": {
-          "type": "number",
-          "default": 5000,
-          "minimum": 1000,
-          "description": "Health check interval (ms)"
-        },
-        "linggen.healthPoll.showStatusBar": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show Linggen status in status bar"
-        },
-        "linggen.installUrl": {
-          "type": "string",
-          "default": "https://linggen.dev",
-          "description": "URL for Linggen installation instructions"
-        },
-        "linggen.remoteTeamMode": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable remote team mode (hides local installation commands)"
         },
         "linggen.mcp.enabled": {
           "type": "boolean",

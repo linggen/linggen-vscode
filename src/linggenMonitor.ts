@@ -98,12 +98,15 @@ export function startLinggenHealthMonitor(
 
     const updateFromConfig = () => {
         const cfg = vscode.workspace.getConfiguration('linggen');
-        const enabled = cfg.get<boolean>('healthPoll.enabled', true);
-        const intervalMs = cfg.get<number>('healthPoll.intervalMs', 5000);
-        const showStatus = cfg.get<boolean>('healthPoll.showStatusBar', true);
+        const enabled = true;
+        const intervalMs = 5000;
+        const showStatus = true;
         const httpUrl = cfg.get<string>('backend.httpUrl', 'http://localhost:8787');
         const baseUrl = httpUrl.replace(/\/+$/, '');
         const linggenMcpUrl = `${baseUrl}/mcp/sse`;
+
+        // Update context key for "local server" detection immediately
+        void vscode.commands.executeCommand('setContext', CONTEXT_IS_LOCAL_SERVER, isLocalServer(baseUrl));
 
         if (showStatus) {
             statusBar.show();
@@ -232,9 +235,7 @@ export function startLinggenHealthMonitor(
     const cfgListener = vscode.workspace.onDidChangeConfiguration((e) => {
         if (
             e.affectsConfiguration('linggen.backend.httpUrl') ||
-            e.affectsConfiguration('linggen.healthPoll.enabled') ||
-            e.affectsConfiguration('linggen.healthPoll.intervalMs') ||
-            e.affectsConfiguration('linggen.healthPoll.showStatusBar')
+            e.affectsConfiguration('linggen.mcp.enabled')
         ) {
             updateFromConfig();
         }
