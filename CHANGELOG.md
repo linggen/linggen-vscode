@@ -2,6 +2,28 @@
 
 All notable changes to the "linggen-vscode" extension will be documented in this file.
 
+## [0.6.0] - 2026-01-19
+
+### Added
+
+- `Linggen: Explain Across Projects` command - generates an AI prompt with context from multiple indexed projects and related memories
+- `Linggen: Pin to Memory` command - anchors code to memory with interactive selection
+- `Linggen: Show Graph` - dependency graph now opens in a dedicated side panel for better visibility
+- `Linggen: Library` command - opens the Linggen global library of skills and policies
+- Memory integration in editor:
+  - CodeLens for `linggen memory: <id>` comments to quickly open memory files
+  - Inlay Hints to preview memory name and summary directly in the editor
+- Automatic AI rules bootstrapping for Cursor (`.cursorrules`), Windsurf (`.windsurfrules`), Zed (`.rules`), and others (`AGENTS.md`)
+- Linggen server health monitoring and status indicators
+- Improved project resolution heuristic for multi-root or containerized environments
+- Claude Code skill bootstrapping and configuration syncing
+
+### Changed
+
+- Updated project indexing and search to support cross-project context retrieval
+- Refined the "Explain" output format for better readability and easy copying to AI assistants
+- Consolidated Linggen commands under a single `🌀 Linggen` context menu
+
 ## [0.4.0] - 2026-01-02
 
 - added cli linggen: pin to memory, that will anchor you code to memory

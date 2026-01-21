@@ -8,7 +8,13 @@ if [ -z "$PACK_ID" ]; then
     exit 1
 fi
 
-RESPONSE=$(curl -s -X GET "$API_URL/api/library/packs/$PACK_ID")
+ENC_PACK_ID=$(python3 - <<'PY'
+import sys, urllib.parse
+print(urllib.parse.quote(sys.argv[1], safe=""))
+PY
+"$PACK_ID")
+
+RESPONSE=$(curl -s -X GET "$API_URL/api/library/packs/$ENC_PACK_ID")
 
 if [ $? -ne 0 ]; then
     echo "Error: Could not connect to linggen-server at $API_URL"

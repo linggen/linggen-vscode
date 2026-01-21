@@ -47,8 +47,13 @@ export async function openLibrary(): Promise<void> {
 
     const config = vscode.workspace.getConfiguration('linggen');
     const httpUrl = config.get<string>('backend.httpUrl', 'http://localhost:8787');
-    const listEndpoint = '/api/library/packs';
-    const readEndpoint = '/api/library/packs';
+    // Newer Linggen servers:
+    // - GET /api/library                -> { folders: string[], packs: LibraryPack[] }
+    // - GET /api/library/packs/<id>     -> { path: string, content: string }
+    //
+    // Older servers may support GET /api/library/packs -> { packs: LibraryPack[] }.
+    const listEndpoint = config.get<string>('backend.libraryListEndpoint', '/api/library');
+    const readEndpoint = config.get<string>('backend.libraryReadEndpoint', '/api/library/packs');
 
     const isRunning = await checkServerHealth(httpUrl);
     if (!isRunning) {
@@ -73,7 +78,7 @@ async function showLibraryFolders(
 
     try {
         const packs = await fetchLibraryPacks(httpUrl, listEndpoint);
-        
+
         // Group by folder
         const folders = new Set<string>();
         for (const pack of packs) {
@@ -117,7 +122,7 @@ async function showPacksInFolder(
     const quickPick = vscode.window.createQuickPick<LibraryQuickPickItem>();
     quickPick.title = `Linggen Library: ${folderName}`;
     quickPick.placeholder = 'Select a pack to install';
-    
+
     const items: LibraryQuickPickItem[] = [
         {
             label: '$(arrow-left) ..',
@@ -154,13 +159,64 @@ async function showPacksInFolder(
 async function fetchLibraryPacks(httpUrl: string, endpoint: string): Promise<LibraryPack[]> {
     const url = new URL(endpoint, httpUrl);
 
-    const res = await fetch(url.toString());
-    if (!res.ok) {
-        throw new Error(`Server returned ${res.status}: ${await res.text()}`);
-    }
+    const tryGet = async (u: string): Promise<LibraryPack[]> => {
+        const res = await fetch(u);
+        const text = await res.text();
+        if (!res.ok) {
+            throw new Error(`GET ${u} returned ${res.status}: ${text}`);
+        }
+        let json: unknown;
+        try {
+            json = JSON.parse(text) as unknown;
+        } catch (e) {
+            throw new Error(`GET ${u} returned non-JSON response: ${String(e)} (${text.slice(0, 200)})`);
+        }
 
-    const data = await res.json() as { packs: LibraryPack[] };
-    return data.packs || [];
+        // Supported shapes:
+        // - { packs: [...] }
+        // - { folders: [...], packs: [...] }
+        // - [ ...packs ]
+        if (Array.isArray(json)) {
+            return json as LibraryPack[];
+        }
+        if (json && typeof json === 'object') {
+            const obj = json as { packs?: unknown };
+            if (Array.isArray(obj.packs)) {
+                return obj.packs as LibraryPack[];
+            }
+        }
+
+        return [];
+    };
+
+    // Preferred list endpoint (new servers): /api/library
+    try {
+        return await tryGet(url.toString());
+    } catch (e) {
+        // Backward compatibility: older servers used GET /api/library/packs
+        const fallback = new URL('/api/library/packs', httpUrl).toString();
+        try {
+            return await tryGet(fallback);
+        } catch {
+            throw e;
+        }
+    }
+}
+
+function joinUrl(base: string, endpointPath: string): string {
+    const b = base.replace(/\/+$/, '');
+    const p = endpointPath.startsWith('/') ? endpointPath : `/${endpointPath}`;
+    return `${b}${p}`;
+}
+
+function buildReadUrl(httpUrl: string, endpoint: string, packId: string): string {
+    const encodedId = encodeURIComponent(packId);
+    const base = joinUrl(httpUrl, endpoint);
+    // If caller provided a templated endpoint, respect it.
+    if (base.includes('{id}')) {
+        return base.replace('{id}', encodedId);
+    }
+    return `${base.replace(/\/+$/, '')}/${encodedId}`;
 }
 
 async function installPack(
@@ -172,16 +228,15 @@ async function installPack(
     try {
         // Read pack content
         // Encode pack.id because it contains slashes (e.g. official/skills/linggen.md)
-        const encodedId = encodeURIComponent(pack.id);
-        const readUrl = `${httpUrl.replace(/\/+$/, '')}${endpoint.startsWith('/') ? '' : '/'}${endpoint}/${encodedId}`;
-        
+        const readUrl = buildReadUrl(httpUrl, endpoint, pack.id);
+
         const res = await fetch(readUrl);
         if (!res.ok) {
-            throw new Error(`Server returned ${res.status}: ${await res.text()}`);
+            throw new Error(`GET ${readUrl} returned ${res.status}: ${await res.text()}`);
         }
 
         const data = await res.json() as LibraryFile;
-        
+
         // Use the original filename from the server path if available, or fall back to pack.name + .md
         let fileName = pack.id + '.md';
         if (data.path) {
@@ -189,12 +244,12 @@ async function installPack(
         } else if (pack.name) {
             fileName = pack.name.toLowerCase().replace(/\s+/g, '-') + '.md';
         }
-        
+
         // Determine destination folder based on pack folder or name
         // Backend returns folder like "official/skills" or "skills"
         const folderName = pack.folder || 'general';
         let destDir = `.linggen/${folderName}`;
-        
+
         if (pack.read_only) {
             // If it's official, we want to store it in .linggen/<type>/official/
             // e.g. "official/skills" -> ".linggen/skills/official"
@@ -215,7 +270,7 @@ async function installPack(
         await vscode.workspace.fs.writeFile(fileUri, new TextEncoder().encode(data.content));
 
         vscode.window.showInformationMessage(`Installed ${pack.name} to ${destDir}/${fileName}`);
-        
+
         // Update manifest
         await updateLibraryManifest(rootUri, pack, httpUrl);
 

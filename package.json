@@ -114,6 +114,16 @@
           "default": "http://localhost:8787",
           "description": "Base URL of the Linggen HTTP server"
         },
+        "linggen.backend.libraryListEndpoint": {
+          "type": "string",
+          "default": "/api/library",
+          "description": "Library list endpoint (returns folders + packs). Newer servers use /api/library."
+        },
+        "linggen.backend.libraryReadEndpoint": {
+          "type": "string",
+          "default": "/api/library/packs",
+          "description": "Library read endpoint base. Pack content is fetched from `${endpoint}/{urlencoded_pack_id}`."
+        },
         "linggen.mcp.enabled": {
           "type": "boolean",
           "default": false,
