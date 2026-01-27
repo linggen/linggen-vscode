@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { checkServerHealth, isLocalServer } from './helpers';
 import { getOutputChannel } from './output';
-
+// linggen memory: frontent_design.md
 const MCP_CONFIGURED_KEY = 'linggen.mcpConfigured';
 const CONTEXT_IS_LOCAL_SERVER = 'linggen.isLocalServer';
 

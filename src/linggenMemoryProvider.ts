@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-const MEMORY_REGEX = /linggen memory: ([\w\.-]+)/g;
+const MEMORY_REGEX = /linggen memory: ([\w.-]+)/g;
 
 /**
  * Finds a memory file by its internal ID or filename.

@@ -34,7 +34,20 @@ linggen
 - **`🌀 Linggen: Explain Across Projects`**: right-click in the editor to send context to Linggen and get an editable markdown explanation with related memories and design anchors.
 - **`🌀 Linggen: Pin to Memory`**: anchor your code to a design decision or architectural pattern (`.linggen/memory/`).
 - **`🌀 Linggen: Library`**: browse and install skills or policies from your Linggen server into your project.
+- **`🌀 Linggen: Browse Online Skills`**: browse, search, and install community skills directly from GitHub. Skills are installed to `.claude/skills/` in your workspace and tracked via the public registry.
 - **`🌀 Linggen: Show Graph`**: shows a lightweight dependency graph visualization in a side panel.
+
+### Online Skills
+
+The **Browse Online Skills** feature lets you discover and install community-contributed skills from GitHub:
+
+- **Browse**: View popular skills with install counts and last update dates
+- **Search**: Filter skills by name or repository URL in real-time
+- **Install**: Download skills directly from GitHub and install to `.claude/skills/` in your workspace
+- **Track**: Installation counts are tracked via a public Cloudflare Worker registry
+- **Cooldown**: Local 24-hour cooldown prevents duplicate installation counts
+
+Skills are GitHub repositories containing a `SKILL.md` file. Once installed, they're immediately available to AI agents like Cursor or Claude Code that scan the `.claude/skills/` directory.
 
 ### Wiki & Documentation
 
@@ -54,9 +67,25 @@ You can configure the extension in VS Code settings:
   "linggen.healthPoll.enabled": true,
   "linggen.healthPoll.intervalMs": 5000,
   "linggen.healthPoll.showStatusBar": true,
-  "linggen.installUrl": "https://linggen.dev"
+  "linggen.installUrl": "https://linggen.dev",
+  "linggen.skills.registryUrl": "https://linggen-analytics.liangatbc.workers.dev",
+  "linggen.skills.apiKey": "dd55d4c93490bf9d6e45124351838ea9"
 }
 ```
+
+#### Environment Variables
+
+You can also configure the extension using a `.env` file in your workspace root:
+
+```env
+# Cloudflare Worker registry URL for online skills
+LINGGEN_CF_WORKER_URL=https://linggen-analytics.liangatbc.workers.dev
+
+# API key for recording skill installations
+API_KEY=dd55d4c93490bf9d6e45124351838ea9
+```
+
+Environment variables take priority over VS Code settings.
 
 ### AI Orchestration
 

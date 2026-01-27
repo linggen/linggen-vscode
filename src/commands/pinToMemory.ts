@@ -16,7 +16,6 @@ async function listMemories(workspaceFolder: vscode.WorkspaceFolder): Promise<Me
             const data = await vscode.workspace.fs.readFile(fileUri);
             const text = new TextDecoder().decode(data);
             
-            const idMatch = text.match(/id:\s*([a-f0-9]+)/);
             const nameMatch = text.match(/name:\s*(.*)/);
             const summaryMatch = text.match(/summary:\s*(.*)/);
             

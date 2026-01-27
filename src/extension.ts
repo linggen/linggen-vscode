@@ -7,12 +7,20 @@ import { bootstrapRules } from './commands/bootstrapRules';
 import { explainAcrossProjects, getExplainProvider } from './commands/explainAcrossProjects';
 import { showGraphInPanel } from './commands/showGraphInPanel';
 import { openLibrary } from './commands/openLibrary';
+import { browseOnlineSkills } from './commands/browseOnlineSkills';
 import { pinToMemory } from './commands/pinToMemory';
 import { LinggenMemoryProvider, openMemory } from './linggenMemoryProvider';
+import { loadEnv } from './env';
 
 export function activate(context: vscode.ExtensionContext): void {
     const outputChannel = getOutputChannel();
     outputChannel.appendLine('Linggen extension activated');
+
+    // Load .env file from workspace root if it exists
+    const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+    if (workspaceFolder) {
+        loadEnv(workspaceFolder.uri.fsPath);
+    }
 
     // Bootstrap Cursor Rules automatically on project open
     void bootstrapRules(context);
@@ -48,6 +56,9 @@ export function activate(context: vscode.ExtensionContext): void {
         ),
         vscode.commands.registerCommand('linggen.openLibrary', () =>
             openLibrary()
+        ),
+        vscode.commands.registerCommand('linggen.browseOnlineSkills', () =>
+            browseOnlineSkills(context)
         ),
         startLinggenHealthMonitor(context)
     );

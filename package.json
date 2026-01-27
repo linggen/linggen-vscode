@@ -2,7 +2,7 @@
   "name": "linggen-vscode",
   "displayName": "Linggen",
   "description": "The easiest way to use AI. Linggen acts as an AI Tutor and Orchestrator, managing skills, context, and project knowledge in the background so you can just focus on results without the technical setup.",
-  "version": "0.6.0",
+  "version": "0.6.2",
   "publisher": "linggen",
   "homepage": "https://linggen.dev",
   "repository": {
@@ -50,6 +50,10 @@
       {
         "command": "linggen.openMemory",
         "title": "🌀 Linggen: Open Memory"
+      },
+      {
+        "command": "linggen.browseOnlineSkills",
+        "title": "🌀 Linggen: Browse Online Skills"
       }
     ],
     "submenus": [
@@ -69,6 +73,9 @@
         },
         {
           "command": "linggen.openLibrary"
+        },
+        {
+          "command": "linggen.browseOnlineSkills"
         },
         {
           "command": "linggen.openMemory",
@@ -103,6 +110,10 @@
         {
           "command": "linggen.openLibrary",
           "group": "navigation@4"
+        },
+        {
+          "command": "linggen.browseOnlineSkills",
+          "group": "navigation@5"
         }
       ]
     },
@@ -128,6 +139,16 @@
           "type": "boolean",
           "default": false,
           "description": "Enable programmatic registration of Linggen MCP server in Cursor (experimental)"
+        },
+        "linggen.skills.registryUrl": {
+          "type": "string",
+          "default": "https://linggen-analytics.liangatbc.workers.dev",
+          "description": "URL of the Cloudflare Worker registry for online skills"
+        },
+        "linggen.skills.apiKey": {
+          "type": "string",
+          "default": "dd55d4c93490bf9d6e45124351838ea9",
+          "description": "API key for recording skill installations to the registry"
         }
       }
     }
@@ -141,16 +162,21 @@
     "test": "node ./out/test/runTest.js"
   },
   "devDependencies": {
-    "@types/vscode": "^1.85.0",
-    "@types/node": "^20.x",
-    "@types/mocha": "^10.0.6",
     "@types/glob": "^8.1.0",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.x",
+    "@types/vscode": "^1.85.0",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
     "@typescript-eslint/parser": "^6.13.0",
-    "eslint": "^8.54.0",
-    "typescript": "^5.3.0",
     "@vscode/test-electron": "^2.3.8",
+    "eslint": "^8.54.0",
+    "glob": "^10.3.10",
     "mocha": "^10.2.0",
-    "glob": "^10.3.10"
+    "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "@types/adm-zip": "^0.5.7",
+    "adm-zip": "^0.5.16",
+    "dotenv": "^17.2.3"
   }
 }
