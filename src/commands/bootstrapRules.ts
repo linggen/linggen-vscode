@@ -22,6 +22,9 @@ export async function bootstrapRules(context: vscode.ExtensionContext): Promise<
     // Always bootstrap Claude skills
     await bootstrapSkills(context, rootPath);
 
+    // Bootstrap CLAUDE.md for Claude Code users
+    await bootstrapClaudeMd(rootPath);
+
     let rulePath = '';
 
     if (appName.includes('cursor')) {
@@ -198,5 +201,41 @@ async function bootstrapSkills(context: vscode.ExtensionContext, rootPath: strin
         outputChannel.appendLine(`Successfully bootstrapped Linggen skills at ${targetSkillsDir}`);
     } catch (error) {
         outputChannel.appendLine(`Failed to bootstrap Linggen skills: ${error}`);
+    }
+}
+
+/**
+ * Ensures that CLAUDE.md exists and references the Linggen skill.
+ * This helps Claude Code discover the .linggen folder with memory, policy, etc.
+ */
+async function bootstrapClaudeMd(rootPath: string): Promise<void> {
+    const outputChannel = getOutputChannel();
+    const claudeMdPath = path.join(rootPath, 'CLAUDE.md');
+    const linggenSkillRef = 'Please read `.claude/skills/linggen/SKILL.md` on load to understand the Linggen project structure and context management system.';
+
+    try {
+        if (fs.existsSync(claudeMdPath)) {
+            // Check if already has the reference
+            const content = fs.readFileSync(claudeMdPath, 'utf8');
+            if (content.includes('.claude/skills/linggen/SKILL.md')) {
+                // Already configured
+                return;
+            }
+
+            // Append the reference
+            const updatedContent = content.trimEnd() + '\n\n' + linggenSkillRef + '\n';
+            fs.writeFileSync(claudeMdPath, updatedContent, 'utf8');
+            outputChannel.appendLine(`Updated CLAUDE.md with Linggen skill reference`);
+        } else {
+            // Create new CLAUDE.md with Linggen reference
+            const newContent = `# Claude Code Instructions
+
+${linggenSkillRef}
+`;
+            fs.writeFileSync(claudeMdPath, newContent, 'utf8');
+            outputChannel.appendLine(`Created CLAUDE.md with Linggen skill reference`);
+        }
+    } catch (error) {
+        outputChannel.appendLine(`Failed to bootstrap CLAUDE.md: ${error}`);
     }
 }

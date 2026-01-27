@@ -125,30 +125,10 @@
           "default": "http://localhost:8787",
           "description": "Base URL of the Linggen HTTP server"
         },
-        "linggen.backend.libraryListEndpoint": {
-          "type": "string",
-          "default": "/api/library",
-          "description": "Library list endpoint (returns folders + packs). Newer servers use /api/library."
-        },
-        "linggen.backend.libraryReadEndpoint": {
-          "type": "string",
-          "default": "/api/library/packs",
-          "description": "Library read endpoint base. Pack content is fetched from `${endpoint}/{urlencoded_pack_id}`."
-        },
         "linggen.mcp.enabled": {
           "type": "boolean",
           "default": false,
           "description": "Enable programmatic registration of Linggen MCP server in Cursor (experimental)"
-        },
-        "linggen.skills.registryUrl": {
-          "type": "string",
-          "default": "https://linggen-analytics.liangatbc.workers.dev",
-          "description": "URL of the Cloudflare Worker registry for online skills"
-        },
-        "linggen.skills.apiKey": {
-          "type": "string",
-          "default": "dd55d4c93490bf9d6e45124351838ea9",
-          "description": "API key for recording skill installations to the registry"
         }
       }
     }
@@ -176,7 +156,6 @@
   },
   "dependencies": {
     "@types/adm-zip": "^0.5.7",
-    "adm-zip": "^0.5.16",
-    "dotenv": "^17.2.3"
+    "adm-zip": "^0.5.16"
   }
 }

@@ -59,37 +59,17 @@ You can configure the extension in VS Code settings:
 
 ```json
 {
-  "linggen.backend.httpUrl": "http://localhost:8787",
-  "linggen.backend.explainAcrossProjectsEndpoint": "/api/query",
-  "linggen.backend.libraryListEndpoint": "/api/library",
-  "linggen.backend.libraryReadEndpoint": "/api/library/packs",
-  "linggen.panel.autoReveal": true,
-  "linggen.healthPoll.enabled": true,
-  "linggen.healthPoll.intervalMs": 5000,
-  "linggen.healthPoll.showStatusBar": true,
-  "linggen.installUrl": "https://linggen.dev",
-  "linggen.skills.registryUrl": "https://linggen-analytics.liangatbc.workers.dev",
-  "linggen.skills.apiKey": "dd55d4c93490bf9d6e45124351838ea9"
+  "linggen.backend.httpUrl": "http://localhost:8787"
 }
 ```
 
-#### Environment Variables
-
-You can also configure the extension using a `.env` file in your workspace root:
-
-```env
-# Cloudflare Worker registry URL for online skills
-LINGGEN_CF_WORKER_URL=https://linggen-analytics.liangatbc.workers.dev
-
-# API key for recording skill installations
-API_KEY=dd55d4c93490bf9d6e45124351838ea9
-```
-
-Environment variables take priority over VS Code settings.
-
 ### AI Orchestration
 
-Linggen automatically orchestrates the connection between your codebase and AI agents (like **Cursor** or **Claude Code**). It manages the "technical handshake" in the background—configuring MCP servers, syncing skills, and injecting design intent—so your AI is instantly smarter without manual setup.
+Linggen automatically orchestrates the connection between your codebase and AI agents. It manages the "technical handshake" in the background—configuring skills, syncing context, and injecting design intent—so your AI is instantly smarter without manual setup.
+
+**For Cursor users:** Linggen automatically creates `.cursor/rules/linggen.md` to inject project context and architectural knowledge.
+
+**For Claude Code users:** Linggen automatically creates or updates `CLAUDE.md` in your workspace root with a reference to `.claude/skills/linggen/SKILL.md`, ensuring Claude Code discovers the `.linggen/` folder containing your project's memory, policies, and design anchors.
 
 ### Troubleshooting
 

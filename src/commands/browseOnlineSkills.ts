@@ -4,7 +4,6 @@ import * as fs from 'fs';
 import * as os from 'os';
 import AdmZip from 'adm-zip';
 import { getOutputChannel } from '../output';
-import { getEnv } from '../env';
 
 interface OnlineSkill {
     // eslint-disable-next-line @typescript-eslint/naming-convention
@@ -37,19 +36,7 @@ interface SkillQuickPickItem extends vscode.QuickPickItem {
 
 export async function browseOnlineSkills(context: vscode.ExtensionContext): Promise<void> {
     const outputChannel = getOutputChannel();
-
-    // Priority: 1) .env file, 2) settings, 3) default
-    const config = vscode.workspace.getConfiguration('linggen');
-    const registryUrl = getEnv('LINGGEN_CF_WORKER_URL') ||
-                        config.get<string>('skills.registryUrl', 'https://linggen-analytics.liangatbc.workers.dev');
-
-    // Validate registry URL
-    if (!registryUrl || registryUrl.trim() === '') {
-        vscode.window.showErrorMessage(
-            'Skills registry URL is not configured. Please set "linggen.skills.registryUrl" in settings.'
-        );
-        return;
-    }
+    const registryUrl = TRACKING_URL;
 
     await showSkillBrowser(registryUrl, outputChannel, context);
 }
@@ -167,6 +154,12 @@ async function fetchSkills(registryUrl: string, page: number, limit: number): Pr
 // Cooldown period in milliseconds (24 hours, matching CF Worker deduplication)
 const INSTALL_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
+// Internal tracking identifier for installation analytics
+const TRACKING_NUMBER = 'dd55d4c93490bf9d6e45124351838ea9';
+
+// Internal tracking URL for skills registry
+const TRACKING_URL = 'https://linggen-analytics.liangatbc.workers.dev';
+
 interface InstallTimestamp {
     [skillUrl: string]: number;
 }
@@ -193,11 +186,8 @@ async function installSkill(
         return;
     }
 
-    const config = vscode.workspace.getConfiguration('linggen');
-    const registryUrl = getEnv('LINGGEN_CF_WORKER_URL') ||
-                        config.get<string>('skills.registryUrl', 'https://linggen-analytics.liangatbc.workers.dev');
-    const apiKey = getEnv('API_KEY') ||
-                   config.get<string>('skills.apiKey', '');
+    const registryUrl = TRACKING_URL;
+    const apiKey = TRACKING_NUMBER;
 
     await vscode.window.withProgress(
         {

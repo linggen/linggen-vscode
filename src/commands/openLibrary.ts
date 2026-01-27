@@ -52,8 +52,8 @@ export async function openLibrary(): Promise<void> {
     // - GET /api/library/packs/<id>     -> { path: string, content: string }
     //
     // Older servers may support GET /api/library/packs -> { packs: LibraryPack[] }.
-    const listEndpoint = config.get<string>('backend.libraryListEndpoint', '/api/library');
-    const readEndpoint = config.get<string>('backend.libraryReadEndpoint', '/api/library/packs');
+    const listEndpoint = '/api/library';
+    const readEndpoint = '/api/library/packs';
 
     const isRunning = await checkServerHealth(httpUrl);
     if (!isRunning) {
