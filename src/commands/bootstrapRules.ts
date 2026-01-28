@@ -24,6 +24,8 @@ export async function bootstrapRules(context: vscode.ExtensionContext): Promise<
 
     // Bootstrap CLAUDE.md for Claude Code users
     await bootstrapClaudeMd(rootPath);
+    // Bootstrap AGENTS.md for Codex users (keep in sync with CLAUDE.md)
+    await bootstrapAgentsMd(rootPath);
 
     let rulePath = '';
 
@@ -237,5 +239,44 @@ ${linggenSkillRef}
         }
     } catch (error) {
         outputChannel.appendLine(`Failed to bootstrap CLAUDE.md: ${error}`);
+    }
+}
+
+/**
+ * Ensures that AGENTS.md exists and mirrors CLAUDE.md for Codex.
+ */
+async function bootstrapAgentsMd(rootPath: string): Promise<void> {
+    const outputChannel = getOutputChannel();
+    const claudeMdPath = path.join(rootPath, 'CLAUDE.md');
+    const agentsMdPath = path.join(rootPath, 'AGENTS.md');
+    const linggenSkillRef = 'Please read `.claude/skills/linggen/SKILL.md` on load to understand the Linggen project structure and context management system.';
+
+    try {
+        let sourceContent = '';
+        if (fs.existsSync(claudeMdPath)) {
+            sourceContent = fs.readFileSync(claudeMdPath, 'utf8');
+        }
+
+        if (!sourceContent) {
+            sourceContent = `# Claude Code Instructions
+
+${linggenSkillRef}
+`;
+        }
+
+        if (fs.existsSync(agentsMdPath)) {
+            const existingContent = fs.readFileSync(agentsMdPath, 'utf8');
+            if (existingContent === sourceContent) {
+                return;
+            }
+            fs.writeFileSync(agentsMdPath, sourceContent, 'utf8');
+            outputChannel.appendLine(`Updated AGENTS.md to mirror CLAUDE.md`);
+            return;
+        }
+
+        fs.writeFileSync(agentsMdPath, sourceContent, 'utf8');
+        outputChannel.appendLine(`Created AGENTS.md to mirror CLAUDE.md`);
+    } catch (error) {
+        outputChannel.appendLine(`Failed to bootstrap AGENTS.md: ${error}`);
     }
 }
