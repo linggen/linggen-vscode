@@ -18,6 +18,13 @@ interface OnlineSkill {
     updated_at: string;
 }
 
+interface SkillsShSkill {
+    id: string;
+    name: string;
+    installs: number;
+    topSource: string;
+}
+
 interface SkillsResponse {
     success: boolean;
     skills: OnlineSkill[];
@@ -30,8 +37,22 @@ interface SkillsResponse {
     };
 }
 
+interface SkillsShResponse {
+    skills: SkillsShSkill[];
+}
+
+type SkillSource = 'linggen' | 'skillsSh';
+
+interface InstallableSkill {
+    url: string;
+    skill: string;
+    ref?: string;
+    source: SkillSource;
+}
+
 interface SkillQuickPickItem extends vscode.QuickPickItem {
-    skill?: OnlineSkill;
+    installable?: InstallableSkill;
+    displayName?: string;
 }
 
 export async function browseOnlineSkills(context: vscode.ExtensionContext): Promise<void> {
@@ -53,8 +74,11 @@ async function showSkillBrowser(
     quickPick.show();
 
     let allSkills: OnlineSkill[] = [];
+    let baseItems: SkillQuickPickItem[] = [];
     const currentPage = 1;
     const limit = 50;
+    let searchTimer: NodeJS.Timeout | undefined;
+    let activeSearchId = 0;
 
     try {
         // Fetch skills from registry
@@ -71,42 +95,75 @@ async function showSkillBrowser(
         }
 
         // Create QuickPick items
-        const items: SkillQuickPickItem[] = allSkills.map(skill => ({
-            label: `$(package) ${skill.skill}`,
-            description: skill.url,
-            detail: `${skill.install_count} installs • Updated: ${new Date(skill.updated_at).toLocaleDateString()}`,
-            skill: skill
-        }));
+        baseItems = buildLinggenItems(allSkills);
 
-        quickPick.items = items;
+        quickPick.items = baseItems;
         quickPick.busy = false;
         quickPick.placeholder = 'Select a skill to install';
 
-        // Enable filtering
+        // Remote search with fallback to skills.sh
         quickPick.onDidChangeValue(() => {
-            if (!quickPick.value) {
-                quickPick.items = items;
+            if (searchTimer) {
+                clearTimeout(searchTimer);
+            }
+
+            const query = quickPick.value.trim();
+            if (!query) {
+                quickPick.items = baseItems;
+                quickPick.placeholder = 'Select a skill to install';
+                quickPick.busy = false;
                 return;
             }
 
-            const filtered = items.filter(item => {
-                const searchText = quickPick.value.toLowerCase();
-                return (
-                    item.skill?.skill.toLowerCase().includes(searchText) ||
-                    item.skill?.url.toLowerCase().includes(searchText)
-                );
-            });
-            quickPick.items = filtered;
+            searchTimer = setTimeout(async () => {
+                const searchId = ++activeSearchId;
+                quickPick.busy = true;
+                quickPick.placeholder = 'Searching skills...';
+
+                try {
+                    const searchResponse = await fetchSearchSkills(registryUrl, query, 1, limit);
+                    let items = buildLinggenItems(searchResponse.skills);
+
+                    if (searchResponse.success && searchResponse.skills.length < 10) {
+                        const skillsShResponse = await fetchSkillsSh(query, 10);
+                        const linggenIds = new Set(
+                            searchResponse.skills.map(skill => `${skill.url}::${skill.skill}`.toLowerCase())
+                        );
+                        const filteredSkillsSh = (skillsShResponse.skills || []).filter(skill => {
+                            const repoUrl = `https://github.com/${skill.topSource}`;
+                            const key = `${repoUrl}::${skill.id}`.toLowerCase();
+                            return !linggenIds.has(key);
+                        });
+                        items = items.concat(buildSkillsShItems(filteredSkillsSh));
+                    }
+
+                    if (searchId === activeSearchId) {
+                        quickPick.items = items;
+                        quickPick.placeholder = items.length > 0 ? 'Select a skill to install' : 'No skills found';
+                    }
+                } catch (error) {
+                    if (searchId === activeSearchId) {
+                        const errorMsg = error instanceof Error ? error.message : String(error);
+                        outputChannel.appendLine(`Search failed: ${errorMsg}`);
+                        quickPick.items = [];
+                        quickPick.placeholder = 'Search failed. Try again.';
+                    }
+                } finally {
+                    if (searchId === activeSearchId) {
+                        quickPick.busy = false;
+                    }
+                }
+            }, 300);
         });
 
         quickPick.onDidAccept(async () => {
             const selection = quickPick.selectedItems[0];
-            if (!selection || !selection.skill) {
+            if (!selection || !selection.installable) {
                 return;
             }
 
             quickPick.dispose();
-            await installSkill(selection.skill, outputChannel, context);
+            await installSkill(selection.installable, outputChannel, context, selection.displayName);
         });
 
     } catch (error) {
@@ -132,6 +189,40 @@ async function showSkillBrowser(
     }
 }
 
+function buildLinggenItems(skills: OnlineSkill[]): SkillQuickPickItem[] {
+    return skills.map(skill => ({
+        label: `$(package) ${skill.skill}`,
+        description: skill.url,
+        detail: `${skill.install_count} installs • Updated: ${new Date(skill.updated_at).toLocaleDateString()} • Source: Linggen`,
+        displayName: skill.skill,
+        installable: {
+            url: skill.url,
+            skill: skill.skill,
+            ref: skill.ref,
+            source: 'linggen'
+        }
+    }));
+}
+
+function buildSkillsShItems(skills: SkillsShSkill[]): SkillQuickPickItem[] {
+    return skills.map(skill => {
+        const repoUrl = `https://github.com/${skill.topSource}`;
+        const displayName = skill.name || skill.id;
+        return {
+            label: `$(package) ${displayName}`,
+            description: repoUrl,
+            detail: `${skill.installs} installs • Source: GitHub`,
+            displayName,
+            installable: {
+                url: repoUrl,
+                skill: skill.id,
+                ref: 'main',
+                source: 'skillsSh'
+            }
+        };
+    });
+}
+
 async function fetchSkills(registryUrl: string, page: number, limit: number): Promise<SkillsResponse> {
     const url = `${registryUrl}/skills?page=${page}&limit=${limit}`;
 
@@ -151,6 +242,46 @@ async function fetchSkills(registryUrl: string, page: number, limit: number): Pr
     }
 }
 
+async function fetchSearchSkills(registryUrl: string, query: string, page: number, limit: number): Promise<SkillsResponse> {
+    const encodedQuery = encodeURIComponent(query);
+    const url = `${registryUrl}/skills/search?q=${encodedQuery}&page=${page}&limit=${limit}`;
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+
+        return await response.json() as SkillsResponse;
+    } catch (error) {
+        if (error instanceof Error && error.message.startsWith('HTTP')) {
+            throw error;
+        }
+        throw new Error(`Failed to connect to registry search at ${url}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
+async function fetchSkillsSh(query: string, limit: number): Promise<SkillsShResponse> {
+    const encodedQuery = encodeURIComponent(query);
+    const url = `https://skills.sh/api/search?q=${encodedQuery}&limit=${limit}`;
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+
+        return await response.json() as SkillsShResponse;
+    } catch (error) {
+        if (error instanceof Error && error.message.startsWith('HTTP')) {
+            throw error;
+        }
+        throw new Error(`Failed to connect to skills.sh at ${url}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+}
+
 // Cooldown period in milliseconds (24 hours, matching CF Worker deduplication)
 const INSTALL_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
@@ -165,12 +296,14 @@ interface InstallTimestamp {
 }
 
 async function installSkill(
-    skill: OnlineSkill,
+    skill: InstallableSkill,
     outputChannel: vscode.OutputChannel,
-    context: vscode.ExtensionContext
+    context: vscode.ExtensionContext,
+    displayName?: string
 ): Promise<void> {
+    const skillLabel = displayName || skill.skill;
     const answer = await vscode.window.showInformationMessage(
-        `Install skill "${skill.skill}" from ${skill.url}?`,
+        `Install skill "${skillLabel}" from ${skill.url}?`,
         'Install',
         'Cancel'
     );
@@ -209,7 +342,7 @@ async function installSkill(
                 const repo = urlParts[1];
                 const ref = skill.ref || 'main';
 
-                outputChannel.appendLine(`Downloading skill: ${skill.skill} from ${url} (ref: ${ref})`);
+                outputChannel.appendLine(`Downloading skill: ${skillLabel} from ${url} (ref: ${ref})`);
 
                 // Download zipball from GitHub
                 const zipUrl = `https://codeload.github.com/${owner}/${repo}/zip/${ref}`;
@@ -280,7 +413,7 @@ async function installSkill(
                 // Cleanup temp file
                 fs.unlinkSync(tempZipPath);
 
-                outputChannel.appendLine(`✓ Skill installed: ${skill.skill} at ${targetDir}`);
+                outputChannel.appendLine(`✓ Skill installed: ${skillLabel} at ${targetDir}`);
 
                 // Check cooldown and record installation to CF Worker registry
                 if (apiKey) {
@@ -303,7 +436,7 @@ async function installSkill(
                 }
 
                 vscode.window.showInformationMessage(
-                    `✓ Skill "${skill.skill}" installed successfully to .claude/skills/${skill.skill}`
+                    `✓ Skill "${skillLabel}" installed successfully to .claude/skills/${skill.skill}`
                 );
 
             } catch (error) {
@@ -317,7 +450,7 @@ async function installSkill(
 async function recordInstallation(
     registryUrl: string,
     apiKey: string,
-    skill: OnlineSkill,
+    skill: InstallableSkill,
     outputChannel: vscode.OutputChannel
 ): Promise<void> {
     try {
