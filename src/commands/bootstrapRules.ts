@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as os from 'os';
+import AdmZip from 'adm-zip';
 import { getOutputChannel } from '../output';
 
 /**
@@ -84,8 +86,12 @@ export async function bootstrapRules(context: vscode.ExtensionContext): Promise<
     }
 
     if (!content) {
-        // Use the skill definition from assets as the default template
-        const templatePath = path.join(context.extensionPath, 'assets', 'skills', 'linggen', 'SKILL.md');
+        // Use the bootstrapped Claude/Codex skill as the default template (preferred).
+        // This comes from the public skills repo and keeps rules consistent across environments.
+        const bootstrappedSkillPath = path.join(rootPath, '.claude', 'skills', 'linggen', 'SKILL.md');
+        const templatePath = fs.existsSync(bootstrappedSkillPath)
+            ? bootstrappedSkillPath
+            : path.join(context.extensionPath, 'assets', 'skills', 'linggen', 'SKILL.md');
         try {
             if (fs.existsSync(templatePath)) {
                 content = fs.readFileSync(templatePath, 'utf8');
@@ -150,13 +156,8 @@ Follow Linggen Skill instructions via shell scripts.
  */
 async function bootstrapSkills(context: vscode.ExtensionContext, rootPath: string): Promise<void> {
     const outputChannel = getOutputChannel();
-    const assetsSkillsDir = path.join(context.extensionPath, 'assets', 'skills', 'linggen');
     const targetSkillsDir = path.join(rootPath, '.claude', 'skills', 'linggen');
     const targetScriptsDir = path.join(targetSkillsDir, 'scripts');
-
-    if (!fs.existsSync(assetsSkillsDir)) {
-        return;
-    }
 
     try {
         // Create directories
@@ -164,28 +165,103 @@ async function bootstrapSkills(context: vscode.ExtensionContext, rootPath: strin
             fs.mkdirSync(targetScriptsDir, { recursive: true });
         }
 
-        // Copy SKILL.md
-        const skillMdSource = path.join(assetsSkillsDir, 'SKILL.md');
-        const skillMdTarget = path.join(targetSkillsDir, 'SKILL.md');
-        if (fs.existsSync(skillMdSource)) {
-            fs.copyFileSync(skillMdSource, skillMdTarget);
+        // Prefer bootstrapping from the public skills repo so users can use Linggen outside VS Code.
+        // Repo: https://github.com/linggen/skills
+        const owner = 'linggen';
+        const repo = 'skills';
+        const ref = 'main';
+        const zipUrl = `https://codeload.github.com/${owner}/${repo}/zip/${ref}`;
+
+        outputChannel.appendLine(`Bootstrapping Linggen skill from ${owner}/${repo} (ref: ${ref})`);
+
+        // Download zipball
+        const response = await fetch(zipUrl);
+        if (!response.ok) {
+            throw new Error(`GitHub returned ${response.status}: ${response.statusText}`);
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+
+        // Write to temp and extract
+        const tempZipPath = path.join(os.tmpdir(), `linggen-skills-${Date.now()}.zip`);
+        fs.writeFileSync(tempZipPath, buffer);
+
+        const zip = new AdmZip(tempZipPath);
+        const zipEntries = zip.getEntries();
+
+        // Find the linggen skill root in the zip. Supported layouts:
+        // - skills/linggen/SKILL.md
+        // - linggen/SKILL.md
+        // The zip has a top-level prefix like "<repo>-<ref>/...".
+        let skillRootInZip: string | null = null;
+        for (const entry of zipEntries) {
+            const entryName = entry.entryName;
+            if (
+                entryName.endsWith('/skills/linggen/SKILL.md') ||
+                entryName.endsWith('/skills/linggen/skill.md') ||
+                entryName.endsWith('/linggen/SKILL.md') ||
+                entryName.endsWith('/linggen/skill.md')
+            ) {
+                skillRootInZip = path.dirname(entryName);
+                break;
+            }
         }
 
-        // Copy scripts
-        const scriptsSourceDir = path.join(assetsSkillsDir, 'scripts');
-        if (fs.existsSync(scriptsSourceDir)) {
-            const scripts = fs.readdirSync(scriptsSourceDir);
-            for (const script of scripts) {
-                const scriptSource = path.join(scriptsSourceDir, script);
-                const scriptTarget = path.join(targetScriptsDir, script);
-                fs.copyFileSync(scriptSource, scriptTarget);
-                // Set executable permissions
-                try {
-                    fs.chmodSync(scriptTarget, 0o755);
-                } catch (chmodError) {
-                    outputChannel.appendLine(`Failed to set executable permissions for ${scriptTarget}: ${chmodError}`);
+        if (!skillRootInZip) {
+            throw new Error(`Could not find linggen SKILL.md in ${owner}/${repo}. Expected skills/linggen/SKILL.md.`);
+        }
+
+        // Clear the existing skill directory to ensure scripts/docs stay in sync.
+        if (fs.existsSync(targetSkillsDir)) {
+            fs.rmSync(targetSkillsDir, { recursive: true, force: true });
+        }
+        fs.mkdirSync(targetScriptsDir, { recursive: true });
+
+        // Extract files under the skill root into .claude/skills/linggen
+        const skillRootPrefix = skillRootInZip + '/';
+        for (const entry of zipEntries) {
+            if (entry.isDirectory) {
+                continue;
+            }
+            if (!entry.entryName.startsWith(skillRootPrefix)) {
+                continue;
+            }
+
+            const relativePath = entry.entryName.substring(skillRootPrefix.length);
+            if (!relativePath || relativePath.includes('..') || relativePath.startsWith('/')) {
+                continue;
+            }
+
+            const destPath = path.join(targetSkillsDir, relativePath);
+            const destDir = path.dirname(destPath);
+            if (!fs.existsSync(destDir)) {
+                fs.mkdirSync(destDir, { recursive: true });
+            }
+            fs.writeFileSync(destPath, entry.getData());
+        }
+
+        // Cleanup temp file
+        try {
+            fs.unlinkSync(tempZipPath);
+        } catch {
+            // ignore
+        }
+
+        // Set executable permissions for scripts (best-effort, may fail on Windows).
+        try {
+            if (fs.existsSync(targetScriptsDir)) {
+                const scripts = fs.readdirSync(targetScriptsDir);
+                for (const script of scripts) {
+                    const scriptTarget = path.join(targetScriptsDir, script);
+                    try {
+                        fs.chmodSync(scriptTarget, 0o755);
+                    } catch (chmodError) {
+                        outputChannel.appendLine(`Failed to set executable permissions for ${scriptTarget}: ${chmodError}`);
+                    }
                 }
             }
+        } catch (e) {
+            outputChannel.appendLine(`Failed to enumerate scripts for chmod: ${e}`);
         }
 
         // Generate .linggen/config if it doesn't exist or update it
