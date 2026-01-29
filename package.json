@@ -2,7 +2,7 @@
   "name": "linggen-vscode",
   "displayName": "Linggen",
   "description": "The easiest way to use AI. Linggen acts as an AI Tutor and Orchestrator, managing skills, context, and project knowledge in the background so you can just focus on results without the technical setup.",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "publisher": "linggen",
   "homepage": "https://linggen.dev",
   "repository": {

@@ -57,7 +57,22 @@ Linggen maintains a global library of domain-specific **Library Packs** (behavio
 
 - **Browse library:** `bash .claude/skills/linggen/scripts/list_library_packs.sh`
 - **Read a pack:** `bash .claude/skills/linggen/scripts/get_library_pack.sh "<pack_id>"` (e.g. `policies/rust/standard.md`)
+- **Lookup skills (local + online):** `bash .claude/skills/linggen/scripts/lookup_skills.sh "<keyword>"`
 - **Note:** Only fetch a Pack if you need specific rules for a language or framework that are not covered by your core Linggen Operator skill.
+
+### 5. Missing Skill Resolution (MANDATORY)
+
+If you need a skill that is not installed locally:
+
+1. **Look it up:** `bash .claude/skills/linggen/scripts/lookup_skills.sh "<skill or keyword>"`
+2. **If it exists in the local library:** fetch it with `get_library_pack.sh` and follow the pack’s instructions.
+3. **If it exists only online:** ask the user for permission to install, then run `bash .claude/skills/linggen/scripts/install_online_skill.sh "<keyword>"` and choose the correct entry.
+
+### 6. Linggen Server Bootstrap
+
+If the Linggen server is not running or the CLI is missing:
+
+- **Start Linggen server:** `bash .claude/skills/linggen/scripts/start_linggen_server.sh`
 
 ## Operational Guidance
 
