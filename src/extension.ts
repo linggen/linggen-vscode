@@ -10,6 +10,7 @@ import { openLibrary } from './commands/openLibrary';
 import { browseOnlineSkills } from './commands/browseOnlineSkills';
 import { pinToMemory } from './commands/pinToMemory';
 import { LinggenMemoryProvider, openMemory } from './linggenMemoryProvider';
+import { LinggenAnchorProvider, openAnchor } from './linggenAnchorProvider';
 
 export function activate(context: vscode.ExtensionContext): void {
     const outputChannel = getOutputChannel();
@@ -19,9 +20,12 @@ export function activate(context: vscode.ExtensionContext): void {
     void bootstrapRules(context);
 
     const memoryProvider = new LinggenMemoryProvider();
+    const anchorProvider = new LinggenAnchorProvider();
     context.subscriptions.push(
         vscode.languages.registerCodeLensProvider({ scheme: 'file' }, memoryProvider),
-        vscode.languages.registerInlayHintsProvider({ scheme: 'file' }, memoryProvider)
+        vscode.languages.registerInlayHintsProvider({ scheme: 'file' }, memoryProvider),
+        vscode.languages.registerCodeLensProvider({ scheme: 'file' }, anchorProvider),
+        vscode.languages.registerDocumentLinkProvider({ scheme: 'file' }, anchorProvider)
     );
 
     // In-memory provider for explain results (does not write .linggen files)
@@ -43,6 +47,9 @@ export function activate(context: vscode.ExtensionContext): void {
         ),
         vscode.commands.registerCommand('linggen.openMemory', (hash: string) =>
             openMemory(hash)
+        ),
+        vscode.commands.registerCommand('linggen.openAnchor', (repoPath: string) =>
+            openAnchor(repoPath)
         ),
         vscode.commands.registerCommand('linggen.showGraphInPanel', (uri?: vscode.Uri) =>
             showGraphInPanel(uri)

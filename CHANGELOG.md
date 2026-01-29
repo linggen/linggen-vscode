@@ -2,6 +2,14 @@
 
 All notable changes to the "linggen-vscode" extension will be documented in this file.
 
+## [0.6.5] - 2026-01-29
+
+- enhanced Linggen: pin to memory; now you can link to any doc
+
+## [0.6.4] - 2026-01-28
+
+- browse online skills
+
 ## [0.6.0] - 2026-01-19
 
 ### Added

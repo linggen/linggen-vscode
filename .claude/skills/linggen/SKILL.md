@@ -49,6 +49,12 @@ Linggen memories capture architectural decisions and constraints.
   1. Locate the file in `.linggen/memory/<filename>.md`.
   2. Read it immediately to understand the context or constraints for that specific block of code.
 
+- **Repo File Anchors:** When you see a comment like `// linggen anchor: <repo/relative/path>` in the code, it is an **anchor** to an existing file in the repository. You MUST:
+
+  1. Resolve `<repo/relative/path>` from the workspace root (do not use absolute paths).
+  2. Read the file to gather context for the current task.
+  3. In VS Code, anchors are clickable via document links / CodeLens.
+
 - **Global Context:** You can always browse all memories in `.linggen/memory/` to understand the project's evolution.
 
 ### 4. Linggen Library (Remote Packs)
