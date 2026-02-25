@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { checkServerHealth } from '../helpers';
+import { checkServerHealth, getMemoryUrl } from '../helpers';
 
 interface LibraryPack {
     id: string;
@@ -45,8 +45,7 @@ export async function openLibrary(): Promise<void> {
         return;
     }
 
-    const config = vscode.workspace.getConfiguration('linggen');
-    const httpUrl = config.get<string>('backend.httpUrl', 'http://localhost:8787');
+    const httpUrl = getMemoryUrl();
     // Newer Linggen servers:
     // - GET /api/library                -> { folders: string[], packs: LibraryPack[] }
     // - GET /api/library/packs/<id>     -> { path: string, content: string }

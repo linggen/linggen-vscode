@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { getOutputChannel } from '../output';
-import { checkServerHealth } from '../helpers';
+import { checkServerHealth, getMemoryUrl } from '../helpers';
 import { findResourceForPath, listResources, type Resource } from '../linggenApi';
 
 function clamp(n: number, min: number, max: number): number {
@@ -205,8 +205,7 @@ export async function explainAcrossProjects(editor?: vscode.TextEditor): Promise
         return;
     }
 
-    const config = vscode.workspace.getConfiguration('linggen');
-    const httpUrl = config.get<string>('backend.httpUrl', 'http://localhost:8787');
+    const httpUrl = getMemoryUrl();
     const endpointPath = '/api/query';
 
     // Ensure Linggen is reachable

@@ -25,47 +25,71 @@ export async function installLinggen(): Promise<void> {
 /**
  * Command: Linggen: Install/Update Linggen (Local)
  *
- * VS Code extensions cannot silently install software. This command asks for explicit
- * confirmation and then runs the official installer script in an integrated terminal.
- * Installs or updates CLI, server, and app for local use.
+ * Offers a QuickPick to install Linggen Memory (ling-mem), Linggen Agent (ling),
+ * or open the website.
  */
 export async function installLinggenCli(): Promise<void> {
     const outputChannel = getOutputChannel();
-    const config = vscode.workspace.getConfiguration('linggen');
-    const installUrl = config.get<string>('installUrl', 'https://linggen.dev');
 
-    const step1 = 'curl -fsSL https://linggen.dev/install-cli.sh | bash';
-    const step2 = 'linggen install';
-    const openWebsiteLabel = `Open ${installUrl}`;
-
-    const choice = await vscode.window.showWarningMessage(
-        'Linggen is required for this extension.\n\nThis will install or update the Linggen CLI, server, and app for local use by running:\n\n' +
-            `${step1}\n${step2}`,
-        { modal: true },
-        'Run installer in Terminal',
-        openWebsiteLabel,
-        'Cancel'
+    const pick = await vscode.window.showQuickPick(
+        [
+            {
+                label: '$(database) Install Linggen Memory (ling-mem)',
+                description: 'Semantic memory, code search, RAG',
+                id: 'memory'
+            },
+            {
+                label: '$(rocket) Install Linggen Agent (ling)',
+                description: 'Autonomous coding agent',
+                id: 'agent'
+            },
+            {
+                label: '$(globe) Open website',
+                description: 'https://linggen.dev',
+                id: 'website'
+            }
+        ],
+        {
+            title: 'Install Linggen',
+            placeHolder: 'Choose what to install'
+        }
     );
 
-    if (!choice || choice === 'Cancel') {
-        outputChannel.appendLine('Linggen local install/update cancelled by user.');
+    if (!pick) {
         return;
     }
 
-    if (choice === openWebsiteLabel) {
+    if (pick.id === 'website') {
         await installLinggen();
         return;
     }
 
-    outputChannel.appendLine('Starting Linggen local installer/updater in integrated terminal…');
+    const isMemory = pick.id === 'memory';
+    const binaryName = isMemory ? 'Linggen Memory (ling-mem)' : 'Linggen Agent (ling)';
+    const installScript = isMemory
+        ? 'curl -fsSL https://linggen.dev/install-mem.sh | bash'
+        : 'curl -fsSL https://linggen.dev/install-agent.sh | bash';
+    const startCmd = isMemory ? 'ling-mem serve' : 'ling serve';
+
+    const choice = await vscode.window.showWarningMessage(
+        `${binaryName} will be installed by running:\n\n${installScript}`,
+        { modal: true },
+        'Run installer in Terminal',
+        'Cancel'
+    );
+
+    if (!choice || choice === 'Cancel') {
+        outputChannel.appendLine(`${binaryName} install cancelled by user.`);
+        return;
+    }
+
+    outputChannel.appendLine(`Starting ${binaryName} installer in integrated terminal…`);
     const terminal = vscode.window.createTerminal({
-        name: 'Linggen Installer'
+        name: `${binaryName} Installer`
     });
     terminal.show(true);
-    terminal.sendText(step1, true);
-    terminal.sendText(step2, true);
+    terminal.sendText(installScript, true);
     vscode.window.showInformationMessage(
-        'Linggen install/update started in the Terminal. When it finishes, you can start using Linggen locally.'
+        `${binaryName} install started in the Terminal. When it finishes, run "${startCmd}" to start the server.`
     );
 }
-

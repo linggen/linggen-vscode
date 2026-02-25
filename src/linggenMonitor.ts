@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
-import { checkServerHealth, isLocalServer } from './helpers';
+import { isLocalServer, getMemoryUrl, getAgentUrl } from './helpers';
 import { getOutputChannel } from './output';
-// linggen memory: frontent_design.md
+import { BackendMonitor } from './healthMonitor';
+
 const MCP_CONFIGURED_KEY = 'linggen.mcpConfigured';
 const CONTEXT_IS_LOCAL_SERVER = 'linggen.isLocalServer';
 
@@ -14,8 +15,6 @@ const MCP_SERVER_NAME = 'Linggen';
 
 async function isMcpSseEndpointResponsive(url: string): Promise<boolean> {
     try {
-        // For SSE endpoints, fetch() resolves once headers arrive. We immediately
-        // cancel the body to avoid keeping an open stream from background polling.
         const res = await fetch(url, {
             method: 'GET',
             signal: AbortSignal.timeout(1500)
@@ -60,7 +59,6 @@ function tryRegisterOrRefreshCursorMcpRegistration(
         registerServer({ name: MCP_SERVER_NAME, server: { url: linggenMcpUrl } });
         return true;
     } catch (e) {
-        // Best-effort only; avoid noisy popups from background polling.
         getOutputChannel().appendLine(
             `Failed to ${mode === 'refresh' ? 'refresh' : 'register'} Cursor MCP: ${String(e)}`
         );
@@ -73,179 +71,179 @@ export function setMcpConfigured(context: vscode.ExtensionContext, value: boolea
 }
 
 /**
- * Background monitor that periodically checks Linggen availability via /api/status.
- * - Updates a status bar item (optional)
- * - Detects transitions (down->up / up->down)
- * - If user previously "connected" Linggen MCP, refresh registration when Linggen comes back up
+ * Background monitor that checks both Linggen Memory and Linggen Agent servers.
+ * - Shows a combined status bar: `Linggen: M✓ A✓` / `M✓ A✗` / etc.
+ * - Sets context keys: `linggen.memoryRunning`, `linggen.agentRunning`
+ * - MCP registration reacts to memory monitor's onHealthChanged
+ * - Click → QuickPick showing both backends
  */
 export function startLinggenHealthMonitor(
     context: vscode.ExtensionContext
 ): vscode.Disposable {
     const output = getOutputChannel();
-
-    let timer: NodeJS.Timeout | undefined;
-    let lastHealthy: boolean | undefined;
     let mcpRegisterInFlight = false;
 
+    // --- Status bar ---
     const statusBar = vscode.window.createStatusBarItem(
         vscode.StatusBarAlignment.Left,
         100
     );
     statusBar.name = 'Linggen';
-    // Visible immediately on startup so users see "loading" while the first health check runs.
     statusBar.text = 'Linggen: $(sync~spin) checking…';
     statusBar.tooltip = 'Linggen: checking server status…';
+    statusBar.command = 'linggen.showBackendStatus';
+    statusBar.show();
 
-    const updateFromConfig = () => {
+    // --- Monitors ---
+    const memoryMonitor = new BackendMonitor(
+        'Memory',
+        getMemoryUrl,
+        '/api/status',
+        'linggen.memoryRunning'
+    );
+
+    const agentMonitor = new BackendMonitor(
+        'Agent',
+        getAgentUrl,
+        '/api/health',
+        'linggen.agentRunning'
+    );
+
+    // --- Combined status bar update ---
+    function updateStatusBar(): void {
+        const m = memoryMonitor.healthy;
+        const a = agentMonitor.healthy;
+
+        const mIcon = m === undefined ? '?' : m ? '✓' : '✗';
+        const aIcon = a === undefined ? '?' : a ? '✓' : '✗';
+
+        statusBar.text = `Linggen: M${mIcon} A${aIcon}`;
+
+        const lines: string[] = [];
+        lines.push(`Memory: ${m ? 'running' : 'offline'} (${memoryMonitor.url})`);
+        lines.push(`Agent: ${a ? 'running' : 'offline'} (${agentMonitor.url})`);
+        statusBar.tooltip = lines.join('\n');
+
+        // Backward compat: set isLocalServer from memory URL
+        void vscode.commands.executeCommand(
+            'setContext',
+            CONTEXT_IS_LOCAL_SERVER,
+            isLocalServer(memoryMonitor.url)
+        );
+    }
+
+    // --- MCP registration (reacts to Memory monitor) ---
+    async function ensureMcpRegisteredOrRefreshed(): Promise<void> {
         const cfg = vscode.workspace.getConfiguration('linggen');
-        const enabled = true;
-        const intervalMs = 5000;
-        const showStatus = true;
-        const httpUrl = cfg.get<string>('backend.httpUrl', 'http://localhost:8787');
-        const baseUrl = httpUrl.replace(/\/+$/, '');
-        const linggenMcpUrl = `${baseUrl}/mcp/sse`;
-
-        // Update context key for "local server" detection immediately
-        void vscode.commands.executeCommand('setContext', CONTEXT_IS_LOCAL_SERVER, isLocalServer(baseUrl));
-
-        if (showStatus) {
-            statusBar.show();
-        } else {
-            statusBar.hide();
-        }
-
-        if (!enabled) {
-            if (timer) {
-                clearInterval(timer);
-                timer = undefined;
-            }
-            statusBar.text = 'Linggen: $(circle-slash) monitoring off';
-            statusBar.tooltip = 'Linggen health monitoring is disabled';
+        const mcpEnabled = cfg.get<boolean>('mcp.enabled', false);
+        if (!mcpEnabled) {
             return;
         }
-
-        // Reset to a "checking…" state whenever monitoring restarts (startup / config change).
-        lastHealthy = undefined;
-        statusBar.text = 'Linggen: $(sync~spin) checking…';
-        statusBar.tooltip = `Linggen: checking server status… (${baseUrl})`;
-
-        if (timer) {
-            clearInterval(timer);
-            timer = undefined;
+        if (mcpRegisterInFlight) {
+            return;
         }
-
-        const tick = async () => {
-            const ok = await checkServerHealth(baseUrl);
-            const mcpEnabled = cfg.get<boolean>('mcp.enabled', false);
-            
-            // Update context key for "local server" detection
-            void vscode.commands.executeCommand('setContext', CONTEXT_IS_LOCAL_SERVER, isLocalServer(baseUrl));
-
-            if (ok) {
-                statusBar.text = 'Linggen: $(check) running';
-                statusBar.tooltip = `Linggen is reachable at ${baseUrl}`;
-            } else {
-                statusBar.text = 'Linggen: $(error) offline';
-                statusBar.tooltip = `Linggen is not reachable at ${baseUrl}`;
-            }
-
-            const ensureMcpRegisteredOrRefreshed = async () => {
-                if (!mcpEnabled) {
-                    return;
-                }
-                if (mcpRegisterInFlight) {
-                    return;
-                }
-                mcpRegisterInFlight = true;
-                try {
-                    const configured = context.globalState.get<boolean>(MCP_CONFIGURED_KEY, false);
-                    output.appendLine(
-                        configured
-                            ? `Linggen is up, refreshing Cursor MCP registration: ${linggenMcpUrl}`
-                            : `Linggen is up, registering Cursor MCP server: ${linggenMcpUrl}`
-                    );
-
-                    const ready = await waitForMcpReady(linggenMcpUrl, 10, 1000);
-                    if (!ready) {
-                        output.appendLine(
-                            `Linggen is up, but MCP endpoint still not responsive: ${linggenMcpUrl}`
-                        );
-                        return;
-                    }
-
-                    let success = false;
-                    if (configured) {
-                        // Refresh: unregister+register. A second refresh a moment later helps some clients exit "loading tools".
-                        success = tryRegisterOrRefreshCursorMcpRegistration(linggenMcpUrl, 'refresh');
-                        if (success) {
-                            await new Promise((r) => setTimeout(r, 1500));
-                            tryRegisterOrRefreshCursorMcpRegistration(linggenMcpUrl, 'refresh');
-                        }
-                    } else {
-                        // First-time register: don't unregister (can cause some clients to spin in "loading tools").
-                        success = tryRegisterOrRefreshCursorMcpRegistration(linggenMcpUrl, 'register');
-                    }
-
-                    if (success) {
-                        // Mark configured so future runs treat this as connected.
-                        setMcpConfigured(context, true);
-                    } else {
-                        output.appendLine(
-                            'Cursor MCP Extension API not available; programmatic registration skipped.'
-                        );
-                        // If not successful, we don't set MCP_CONFIGURED_KEY so we'll try again next time health changes.
-                    }
-                } finally {
-                    mcpRegisterInFlight = false;
-                }
-            };
-
+        mcpRegisterInFlight = true;
+        try {
+            const baseUrl = getMemoryUrl();
+            const linggenMcpUrl = `${baseUrl}/mcp/sse`;
             const configured = context.globalState.get<boolean>(MCP_CONFIGURED_KEY, false);
 
-            if (lastHealthy === undefined) {
-                lastHealthy = ok;
-                if (ok) {
-                    void ensureMcpRegisteredOrRefreshed();
-                }
+            output.appendLine(
+                configured
+                    ? `Linggen is up, refreshing Cursor MCP registration: ${linggenMcpUrl}`
+                    : `Linggen is up, registering Cursor MCP server: ${linggenMcpUrl}`
+            );
+
+            const ready = await waitForMcpReady(linggenMcpUrl, 10, 1000);
+            if (!ready) {
+                output.appendLine(
+                    `Linggen is up, but MCP endpoint still not responsive: ${linggenMcpUrl}`
+                );
                 return;
             }
 
-            if (lastHealthy !== ok) {
-                // transition
-                lastHealthy = ok;
-                output.appendLine(`Linggen health changed: ${ok ? 'UP' : 'DOWN'} (${baseUrl})`);
-
-                if (ok) {
-                    void ensureMcpRegisteredOrRefreshed();
+            let success = false;
+            if (configured) {
+                success = tryRegisterOrRefreshCursorMcpRegistration(linggenMcpUrl, 'refresh');
+                if (success) {
+                    await new Promise((r) => setTimeout(r, 1500));
+                    tryRegisterOrRefreshCursorMcpRegistration(linggenMcpUrl, 'refresh');
                 }
-            } else if (ok && !configured) {
-                // If we are healthy but not yet configured, it means a previous attempt (e.g. on startup) 
-                // might have failed because the Cursor API wasn't ready yet. Retry.
-                void ensureMcpRegisteredOrRefreshed();
+            } else {
+                success = tryRegisterOrRefreshCursorMcpRegistration(linggenMcpUrl, 'register');
             }
-        };
 
-        // Run once immediately, then on interval.
-        void tick();
-        timer = setInterval(() => void tick(), Math.max(1000, intervalMs));
-    };
+            if (success) {
+                setMcpConfigured(context, true);
+            } else {
+                output.appendLine(
+                    'Cursor MCP Extension API not available; programmatic registration skipped.'
+                );
+            }
+        } finally {
+            mcpRegisterInFlight = false;
+        }
+    }
 
-    updateFromConfig();
+    // --- Wire events ---
+    const memSub = memoryMonitor.onHealthChanged((healthy) => {
+        updateStatusBar();
+        if (healthy) {
+            void ensureMcpRegisteredOrRefreshed();
+        }
+    });
+    const agentSub = agentMonitor.onHealthChanged(() => {
+        updateStatusBar();
+    });
 
+    // --- QuickPick command ---
+    const statusCmd = vscode.commands.registerCommand('linggen.showBackendStatus', async () => {
+        const items: vscode.QuickPickItem[] = [
+            {
+                label: `$(server) Memory: ${memoryMonitor.healthy ? 'running' : 'offline'}`,
+                description: memoryMonitor.url,
+                detail: 'Linggen Memory server (ling-mem)'
+            },
+            {
+                label: `$(server) Agent: ${agentMonitor.healthy ? 'running' : 'offline'}`,
+                description: agentMonitor.url,
+                detail: 'Linggen Agent server (ling)'
+            }
+        ];
+        await vscode.window.showQuickPick(items, {
+            title: 'Linggen Backend Status',
+            placeHolder: 'Backend servers'
+        });
+    });
+
+    // --- Start monitors ---
+    memoryMonitor.start();
+    agentMonitor.start();
+
+    // Initial status bar render after a short delay to let first ticks complete
+    setTimeout(updateStatusBar, 500);
+
+    // --- Config change listener ---
     const cfgListener = vscode.workspace.onDidChangeConfiguration((e) => {
         if (
+            e.affectsConfiguration('linggen.memory.url') ||
+            e.affectsConfiguration('linggen.agent.url') ||
             e.affectsConfiguration('linggen.backend.httpUrl') ||
             e.affectsConfiguration('linggen.mcp.enabled')
         ) {
-            updateFromConfig();
+            memoryMonitor.start();
+            agentMonitor.start();
+            updateStatusBar();
         }
     });
 
     return new vscode.Disposable(() => {
         cfgListener.dispose();
+        memSub.dispose();
+        agentSub.dispose();
+        statusCmd.dispose();
         statusBar.dispose();
-        if (timer) {
-            clearInterval(timer);
-        }
+        memoryMonitor.dispose();
+        agentMonitor.dispose();
     });
 }

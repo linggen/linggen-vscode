@@ -1,7 +1,7 @@
 {
   "name": "linggen-vscode",
   "displayName": "Linggen",
-  "description": "The easiest way to use AI. Linggen acts as an AI Tutor and Orchestrator, managing skills, context, and project knowledge in the background so you can just focus on results without the technical setup.",
+  "description": "Semantic memory, code search, and AI agent for coding assistants. Connects to Linggen Memory (ling-mem) and Linggen Agent (ling) for RAG, dependency graphs, persistent context, and autonomous coding.",
   "version": "0.6.5",
   "publisher": "linggen",
   "homepage": "https://linggen.dev",
@@ -25,7 +25,7 @@
       {
         "command": "linggen.installCli",
         "title": "🌀 Linggen: Install/Update Linggen (Local)",
-        "description": "Install or update Linggen CLI, server and app for local use"
+        "description": "Install or update Linggen Memory (ling-mem) for local use"
       },
       {
         "command": "linggen.indexCurrentProject",
@@ -54,6 +54,14 @@
       {
         "command": "linggen.browseOnlineSkills",
         "title": "🌀 Linggen: Browse Online Skills"
+      },
+      {
+        "command": "linggen.agentChat",
+        "title": "🌀 Linggen: Chat with Agent"
+      },
+      {
+        "command": "linggen.agentListRuns",
+        "title": "🌀 Linggen: Agent Runs"
       }
     ],
     "submenus": [
@@ -69,10 +77,23 @@
           "when": "linggen.isLocalServer"
         },
         {
-          "command": "linggen.pinToMemory"
+          "command": "linggen.indexCurrentProject",
+          "when": "linggen.memoryRunning"
         },
         {
-          "command": "linggen.openLibrary"
+          "command": "linggen.explainAcrossProjects",
+          "when": "linggen.memoryRunning"
+        },
+        {
+          "command": "linggen.showGraphInPanel",
+          "when": "linggen.memoryRunning"
+        },
+        {
+          "command": "linggen.openLibrary",
+          "when": "linggen.memoryRunning"
+        },
+        {
+          "command": "linggen.pinToMemory"
         },
         {
           "command": "linggen.browseOnlineSkills"
@@ -80,6 +101,14 @@
         {
           "command": "linggen.openMemory",
           "when": "false"
+        },
+        {
+          "command": "linggen.agentChat",
+          "when": "linggen.agentRunning"
+        },
+        {
+          "command": "linggen.agentListRuns",
+          "when": "linggen.agentRunning"
         }
       ],
       "explorer/context": [
@@ -120,10 +149,21 @@
     "configuration": {
       "title": "Linggen",
       "properties": {
+        "linggen.memory.url": {
+          "type": "string",
+          "default": "http://localhost:8787",
+          "description": "Base URL of the Linggen Memory server (ling-mem)"
+        },
+        "linggen.agent.url": {
+          "type": "string",
+          "default": "http://localhost:6666",
+          "description": "Base URL of the Linggen Agent server (ling)"
+        },
         "linggen.backend.httpUrl": {
           "type": "string",
           "default": "http://localhost:8787",
-          "description": "Base URL of the Linggen HTTP server"
+          "deprecationMessage": "Deprecated: Use linggen.memory.url instead.",
+          "description": "Deprecated — use linggen.memory.url. Base URL of the Linggen Memory server."
         },
         "linggen.mcp.enabled": {
           "type": "boolean",

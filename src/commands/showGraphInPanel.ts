@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { getOutputChannel } from '../output';
-import { checkServerHealth } from '../helpers';
+import { checkServerHealth, getMemoryUrl } from '../helpers';
 import { getGraphWithStatus, listResources, type GraphResponse, type Resource } from '../linggenApi';
 import { getGraphWebviewHtml } from '../graphWebview';
 import { getMessageHtml } from '../linggenWebviewHelper';
@@ -118,8 +118,7 @@ function getLoadingHtml(fileName: string): string {
 
 export async function showGraphInPanel(uri?: vscode.Uri): Promise<void> {
     const outputChannel = getOutputChannel();
-    const config = vscode.workspace.getConfiguration('linggen');
-    const httpUrl = config.get<string>('backend.httpUrl', 'http://localhost:8787');
+    const httpUrl = getMemoryUrl();
 
     // Determine the file/folder to focus
     let targetPath: string;

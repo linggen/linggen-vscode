@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { getOutputChannel } from '../output';
-import { checkServerHealth } from '../helpers';
+import { checkServerHealth, getMemoryUrl } from '../helpers';
 import { installLinggen, installLinggenCli } from './install';
 import {
     getOrCreateLocalResourceForWorkspace,
@@ -21,8 +21,7 @@ export async function indexCurrentProject(): Promise<void> {
     }
 
     const workspacePath = workspaceFolders[0].uri.fsPath;
-    const config = vscode.workspace.getConfiguration('linggen');
-    const httpUrl = config.get<string>('backend.httpUrl', 'http://localhost:8787');
+    const httpUrl = getMemoryUrl();
 
     outputChannel.appendLine(`Indexing project via Linggen HTTP API: ${workspacePath}`);
 

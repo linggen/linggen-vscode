@@ -11,6 +11,8 @@ import { browseOnlineSkills } from './commands/browseOnlineSkills';
 import { pinToMemory } from './commands/pinToMemory';
 import { LinggenMemoryProvider, openMemory } from './linggenMemoryProvider';
 import { LinggenAnchorProvider, openAnchor } from './linggenAnchorProvider';
+import { agentChat } from './commands/agentChat';
+import { agentRuns } from './commands/agentRuns';
 
 export function activate(context: vscode.ExtensionContext): void {
     const outputChannel = getOutputChannel();
@@ -60,6 +62,8 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('linggen.browseOnlineSkills', () =>
             browseOnlineSkills(context)
         ),
+        vscode.commands.registerCommand('linggen.agentChat', () => agentChat()),
+        vscode.commands.registerCommand('linggen.agentListRuns', () => agentRuns()),
         startLinggenHealthMonitor(context)
     );
 }

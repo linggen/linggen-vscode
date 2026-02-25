@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import AdmZip from 'adm-zip';
 import { getOutputChannel } from '../output';
+import { getMemoryUrl } from '../helpers';
 
 /**
  * Command: Linggen: Bootstrap AI Rules
@@ -68,8 +69,8 @@ export async function bootstrapRules(context: vscode.ExtensionContext): Promise<
         rulePath = path.join(rootPath, 'AGENTS.md');
     }
 
-    const localSkillPath = path.join(rootPath, '.linggen', 'skills', 'linggen.md');
-    const officialSkillPath = path.join(rootPath, '.linggen', 'skills', 'official', 'linggen.md');
+    const localSkillPath = path.join(rootPath, '.linggen', 'skills', 'memory.md');
+    const officialSkillPath = path.join(rootPath, '.linggen', 'skills', 'official', 'memory.md');
 
     // 1. Determine the content
     let content = '';
@@ -88,10 +89,10 @@ export async function bootstrapRules(context: vscode.ExtensionContext): Promise<
     if (!content) {
         // Use the bootstrapped Claude/Codex skill as the default template (preferred).
         // This comes from the public skills repo and keeps rules consistent across environments.
-        const bootstrappedSkillPath = path.join(rootPath, '.claude', 'skills', 'linggen', 'SKILL.md');
+        const bootstrappedSkillPath = path.join(rootPath, '.claude', 'skills', 'memory', 'SKILL.md');
         const templatePath = fs.existsSync(bootstrappedSkillPath)
             ? bootstrappedSkillPath
-            : path.join(context.extensionPath, 'assets', 'skills', 'linggen', 'SKILL.md');
+            : path.join(context.extensionPath, 'assets', 'skills', 'memory', 'SKILL.md');
         try {
             if (fs.existsSync(templatePath)) {
                 content = fs.readFileSync(templatePath, 'utf8');
@@ -156,7 +157,7 @@ Follow Linggen Skill instructions via shell scripts.
  */
 async function bootstrapSkills(context: vscode.ExtensionContext, rootPath: string): Promise<void> {
     const outputChannel = getOutputChannel();
-    const targetSkillsDir = path.join(rootPath, '.claude', 'skills', 'linggen');
+    const targetSkillsDir = path.join(rootPath, '.claude', 'skills', 'memory');
     const targetScriptsDir = path.join(targetSkillsDir, 'scripts');
 
     try {
@@ -172,7 +173,7 @@ async function bootstrapSkills(context: vscode.ExtensionContext, rootPath: strin
         const ref = 'main';
         const zipUrl = `https://codeload.github.com/${owner}/${repo}/zip/${ref}`;
 
-        outputChannel.appendLine(`Bootstrapping Linggen skill from ${owner}/${repo} (ref: ${ref})`);
+        outputChannel.appendLine(`Bootstrapping memory skill from ${owner}/${repo} (ref: ${ref})`);
 
         // Download zipball
         const response = await fetch(zipUrl);
@@ -189,18 +190,18 @@ async function bootstrapSkills(context: vscode.ExtensionContext, rootPath: strin
         const zip = new AdmZip(tempZipPath);
         const zipEntries = zip.getEntries();
 
-        // Find the linggen skill root in the zip. Supported layouts:
-        // - skills/linggen/SKILL.md
-        // - linggen/SKILL.md
+        // Find the memory skill root in the zip. Supported layouts:
+        // - skills/memory/SKILL.md
+        // - memory/SKILL.md
         // The zip has a top-level prefix like "<repo>-<ref>/...".
         let skillRootInZip: string | null = null;
         for (const entry of zipEntries) {
             const entryName = entry.entryName;
             if (
-                entryName.endsWith('/skills/linggen/SKILL.md') ||
-                entryName.endsWith('/skills/linggen/skill.md') ||
-                entryName.endsWith('/linggen/SKILL.md') ||
-                entryName.endsWith('/linggen/skill.md')
+                entryName.endsWith('/skills/memory/SKILL.md') ||
+                entryName.endsWith('/skills/memory/skill.md') ||
+                entryName.endsWith('/memory/SKILL.md') ||
+                entryName.endsWith('/memory/skill.md')
             ) {
                 skillRootInZip = path.dirname(entryName);
                 break;
@@ -208,7 +209,7 @@ async function bootstrapSkills(context: vscode.ExtensionContext, rootPath: strin
         }
 
         if (!skillRootInZip) {
-            throw new Error(`Could not find linggen SKILL.md in ${owner}/${repo}. Expected skills/linggen/SKILL.md.`);
+            throw new Error(`Could not find memory SKILL.md in ${owner}/${repo}. Expected skills/memory/SKILL.md.`);
         }
 
         // Clear the existing skill directory to ensure scripts/docs stay in sync.
@@ -217,7 +218,7 @@ async function bootstrapSkills(context: vscode.ExtensionContext, rootPath: strin
         }
         fs.mkdirSync(targetScriptsDir, { recursive: true });
 
-        // Extract files under the skill root into .claude/skills/linggen
+        // Extract files under the skill root into .claude/skills/memory
         const skillRootPrefix = skillRootInZip + '/';
         for (const entry of zipEntries) {
             if (entry.isDirectory) {
@@ -270,15 +271,14 @@ async function bootstrapSkills(context: vscode.ExtensionContext, rootPath: strin
             fs.mkdirSync(linggenConfigDir, { recursive: true });
         }
         const linggenConfigFile = path.join(linggenConfigDir, 'config');
-        const config = vscode.workspace.getConfiguration('linggen');
-        const apiUrl = config.get<string>('backend.httpUrl', 'http://localhost:8787');
+        const apiUrl = getMemoryUrl();
         
         const configContent = `# Linggen Workspace Configuration\n# This file is automatically updated by the Linggen VS Code extension.\nLINGGEN_API_URL="${apiUrl}"\n`;
         fs.writeFileSync(linggenConfigFile, configContent, 'utf8');
 
-        outputChannel.appendLine(`Successfully bootstrapped Linggen skills at ${targetSkillsDir}`);
+        outputChannel.appendLine(`Successfully bootstrapped memory skill at ${targetSkillsDir}`);
     } catch (error) {
-        outputChannel.appendLine(`Failed to bootstrap Linggen skills: ${error}`);
+        outputChannel.appendLine(`Failed to bootstrap memory skill: ${error}`);
     }
 }
 
@@ -289,13 +289,22 @@ async function bootstrapSkills(context: vscode.ExtensionContext, rootPath: strin
 async function bootstrapClaudeMd(rootPath: string): Promise<void> {
     const outputChannel = getOutputChannel();
     const claudeMdPath = path.join(rootPath, 'CLAUDE.md');
-    const linggenSkillRef = 'Please read `.claude/skills/linggen/SKILL.md` on load to understand the Linggen project structure and context management system.';
+    const linggenSkillRef = 'Please read `.claude/skills/memory/SKILL.md` on load to understand the Linggen Memory skill and context management system.';
+    const oldSkillRef = '.claude/skills/linggen/SKILL.md';
 
     try {
         if (fs.existsSync(claudeMdPath)) {
-            // Check if already has the reference
-            const content = fs.readFileSync(claudeMdPath, 'utf8');
-            if (content.includes('.claude/skills/linggen/SKILL.md')) {
+            let content = fs.readFileSync(claudeMdPath, 'utf8');
+
+            // Migrate old reference if present
+            if (content.includes(oldSkillRef)) {
+                content = content.replace(oldSkillRef, '.claude/skills/memory/SKILL.md');
+                fs.writeFileSync(claudeMdPath, content, 'utf8');
+                outputChannel.appendLine(`Migrated CLAUDE.md from old linggen skill to memory skill`);
+                return;
+            }
+
+            if (content.includes('.claude/skills/memory/SKILL.md')) {
                 // Already configured
                 return;
             }
@@ -303,15 +312,15 @@ async function bootstrapClaudeMd(rootPath: string): Promise<void> {
             // Append the reference
             const updatedContent = content.trimEnd() + '\n\n' + linggenSkillRef + '\n';
             fs.writeFileSync(claudeMdPath, updatedContent, 'utf8');
-            outputChannel.appendLine(`Updated CLAUDE.md with Linggen skill reference`);
+            outputChannel.appendLine(`Updated CLAUDE.md with memory skill reference`);
         } else {
-            // Create new CLAUDE.md with Linggen reference
+            // Create new CLAUDE.md with memory skill reference
             const newContent = `# Claude Code Instructions
 
 ${linggenSkillRef}
 `;
             fs.writeFileSync(claudeMdPath, newContent, 'utf8');
-            outputChannel.appendLine(`Created CLAUDE.md with Linggen skill reference`);
+            outputChannel.appendLine(`Created CLAUDE.md with memory skill reference`);
         }
     } catch (error) {
         outputChannel.appendLine(`Failed to bootstrap CLAUDE.md: ${error}`);
@@ -319,39 +328,54 @@ ${linggenSkillRef}
 }
 
 /**
- * Ensures that AGENTS.md exists and mirrors CLAUDE.md for Codex.
+ * Ensures that AGENTS.md exists and references the Linggen skill.
+ * Preserves user content and only appends the reference if missing.
  */
 async function bootstrapAgentsMd(rootPath: string): Promise<void> {
     const outputChannel = getOutputChannel();
     const claudeMdPath = path.join(rootPath, 'CLAUDE.md');
     const agentsMdPath = path.join(rootPath, 'AGENTS.md');
-    const linggenSkillRef = 'Please read `.claude/skills/linggen/SKILL.md` on load to understand the Linggen project structure and context management system.';
+    const linggenSkillRef = 'Please read `.claude/skills/memory/SKILL.md` on load to understand the Linggen Memory skill and context management system.';
+    const oldSkillRef = '.claude/skills/linggen/SKILL.md';
 
     try {
-        let sourceContent = '';
-        if (fs.existsSync(claudeMdPath)) {
-            sourceContent = fs.readFileSync(claudeMdPath, 'utf8');
+        if (fs.existsSync(agentsMdPath)) {
+            let existingContent = fs.readFileSync(agentsMdPath, 'utf8');
+
+            // Migrate old reference if present
+            if (existingContent.includes(oldSkillRef)) {
+                existingContent = existingContent.replace(oldSkillRef, '.claude/skills/memory/SKILL.md');
+                fs.writeFileSync(agentsMdPath, existingContent, 'utf8');
+                outputChannel.appendLine(`Migrated AGENTS.md from old linggen skill to memory skill`);
+                return;
+            }
+
+            if (existingContent.includes('.claude/skills/memory/SKILL.md')) {
+                return;
+            }
+            const updatedContent = existingContent.trimEnd() + '\n\n' + linggenSkillRef + '\n';
+            fs.writeFileSync(agentsMdPath, updatedContent, 'utf8');
+            outputChannel.appendLine(`Updated AGENTS.md with memory skill reference`);
+            return;
         }
 
-        if (!sourceContent) {
-            sourceContent = `# Claude Code Instructions
+        let newContent = '';
+        if (fs.existsSync(claudeMdPath)) {
+            const claudeContent = fs.readFileSync(claudeMdPath, 'utf8');
+            if (claudeContent.includes('.claude/skills/memory/SKILL.md')) {
+                newContent = claudeContent;
+            } else {
+                newContent = claudeContent.trimEnd() + '\n\n' + linggenSkillRef + '\n';
+            }
+        } else {
+            newContent = `# Claude Code Instructions
 
 ${linggenSkillRef}
 `;
         }
 
-        if (fs.existsSync(agentsMdPath)) {
-            const existingContent = fs.readFileSync(agentsMdPath, 'utf8');
-            if (existingContent === sourceContent) {
-                return;
-            }
-            fs.writeFileSync(agentsMdPath, sourceContent, 'utf8');
-            outputChannel.appendLine(`Updated AGENTS.md to mirror CLAUDE.md`);
-            return;
-        }
-
-        fs.writeFileSync(agentsMdPath, sourceContent, 'utf8');
-        outputChannel.appendLine(`Created AGENTS.md to mirror CLAUDE.md`);
+        fs.writeFileSync(agentsMdPath, newContent, 'utf8');
+        outputChannel.appendLine(`Created AGENTS.md with memory skill reference`);
     } catch (error) {
         outputChannel.appendLine(`Failed to bootstrap AGENTS.md: ${error}`);
     }
