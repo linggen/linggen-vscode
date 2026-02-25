@@ -1,8 +1,8 @@
 {
   "name": "linggen-vscode",
   "displayName": "Linggen",
-  "description": "Semantic memory, code search, and AI agent for coding assistants. Connects to Linggen Memory (ling-mem) and Linggen Agent (ling) for RAG, dependency graphs, persistent context, and autonomous coding.",
-  "version": "0.6.5",
+  "description": "AI coding agent extension for VS Code. Connects to Linggen Agent (ling) for autonomous coding, persistent memory, and skill management.",
+  "version": "0.7.0",
   "publisher": "linggen",
   "homepage": "https://linggen.dev",
   "repository": {
@@ -24,50 +24,34 @@
     "commands": [
       {
         "command": "linggen.installCli",
-        "title": "🌀 Linggen: Install/Update Linggen (Local)",
-        "description": "Install or update Linggen Memory (ling-mem) for local use"
-      },
-      {
-        "command": "linggen.indexCurrentProject",
-        "title": "🌀 Linggen: Index Current Project"
-      },
-      {
-        "command": "linggen.explainAcrossProjects",
-        "title": "🌀 Linggen: Explain Across Projects"
-      },
-      {
-        "command": "linggen.showGraphInPanel",
-        "title": "🌀 Linggen: Show Graph"
-      },
-      {
-        "command": "linggen.openLibrary",
-        "title": "🌀 Linggen: Library"
+        "title": "Linggen: Install/Update Agent (ling)",
+        "description": "Install or update Linggen Agent (ling)"
       },
       {
         "command": "linggen.pinToMemory",
-        "title": "🌀 Linggen: Pin to Memory"
+        "title": "Linggen: Pin to Memory"
       },
       {
         "command": "linggen.openMemory",
-        "title": "🌀 Linggen: Open Memory"
+        "title": "Linggen: Open Memory"
       },
       {
         "command": "linggen.browseOnlineSkills",
-        "title": "🌀 Linggen: Browse Online Skills"
+        "title": "Linggen: Browse Online Skills"
       },
       {
         "command": "linggen.agentChat",
-        "title": "🌀 Linggen: Chat with Agent"
+        "title": "Linggen: Chat with Agent"
       },
       {
         "command": "linggen.agentListRuns",
-        "title": "🌀 Linggen: Agent Runs"
+        "title": "Linggen: Agent Runs"
       }
     ],
     "submenus": [
       {
         "id": "linggen.menu",
-        "label": "🌀 Linggen"
+        "label": "Linggen"
       }
     ],
     "menus": {
@@ -75,22 +59,6 @@
         {
           "command": "linggen.installCli",
           "when": "linggen.isLocalServer"
-        },
-        {
-          "command": "linggen.indexCurrentProject",
-          "when": "linggen.memoryRunning"
-        },
-        {
-          "command": "linggen.explainAcrossProjects",
-          "when": "linggen.memoryRunning"
-        },
-        {
-          "command": "linggen.showGraphInPanel",
-          "when": "linggen.memoryRunning"
-        },
-        {
-          "command": "linggen.openLibrary",
-          "when": "linggen.memoryRunning"
         },
         {
           "command": "linggen.pinToMemory"
@@ -125,50 +93,26 @@
       ],
       "linggen.menu": [
         {
-          "command": "linggen.explainAcrossProjects",
+          "command": "linggen.pinToMemory",
           "group": "navigation@1"
         },
         {
-          "command": "linggen.pinToMemory",
+          "command": "linggen.agentChat",
           "group": "navigation@2"
         },
         {
-          "command": "linggen.showGraphInPanel",
-          "group": "navigation@3"
-        },
-        {
-          "command": "linggen.openLibrary",
-          "group": "navigation@4"
-        },
-        {
           "command": "linggen.browseOnlineSkills",
-          "group": "navigation@5"
+          "group": "navigation@3"
         }
       ]
     },
     "configuration": {
       "title": "Linggen",
       "properties": {
-        "linggen.memory.url": {
-          "type": "string",
-          "default": "http://localhost:8787",
-          "description": "Base URL of the Linggen Memory server (ling-mem)"
-        },
         "linggen.agent.url": {
           "type": "string",
           "default": "http://localhost:6666",
           "description": "Base URL of the Linggen Agent server (ling)"
-        },
-        "linggen.backend.httpUrl": {
-          "type": "string",
-          "default": "http://localhost:8787",
-          "deprecationMessage": "Deprecated: Use linggen.memory.url instead.",
-          "description": "Deprecated — use linggen.memory.url. Base URL of the Linggen Memory server."
-        },
-        "linggen.mcp.enabled": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable programmatic registration of Linggen MCP server in Cursor (experimental)"
         }
       }
     }

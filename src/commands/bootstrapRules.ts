@@ -4,7 +4,6 @@ import * as fs from 'fs';
 import * as os from 'os';
 import AdmZip from 'adm-zip';
 import { getOutputChannel } from '../output';
-import { getMemoryUrl } from '../helpers';
 
 /**
  * Command: Linggen: Bootstrap AI Rules
@@ -264,17 +263,6 @@ async function bootstrapSkills(context: vscode.ExtensionContext, rootPath: strin
         } catch (e) {
             outputChannel.appendLine(`Failed to enumerate scripts for chmod: ${e}`);
         }
-
-        // Generate .linggen/config if it doesn't exist or update it
-        const linggenConfigDir = path.join(rootPath, '.linggen');
-        if (!fs.existsSync(linggenConfigDir)) {
-            fs.mkdirSync(linggenConfigDir, { recursive: true });
-        }
-        const linggenConfigFile = path.join(linggenConfigDir, 'config');
-        const apiUrl = getMemoryUrl();
-        
-        const configContent = `# Linggen Workspace Configuration\n# This file is automatically updated by the Linggen VS Code extension.\nLINGGEN_API_URL="${apiUrl}"\n`;
-        fs.writeFileSync(linggenConfigFile, configContent, 'utf8');
 
         outputChannel.appendLine(`Successfully bootstrapped memory skill at ${targetSkillsDir}`);
     } catch (error) {

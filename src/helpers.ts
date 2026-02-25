@@ -22,53 +22,6 @@ export function isLocalServer(httpUrl: string): boolean {
 }
 
 /**
- * Helper: Check if Linggen server is healthy via /api/status.
- */
-export async function checkServerHealth(httpUrl: string): Promise<boolean> {
-    const outputChannel = getOutputChannel();
-    try {
-        outputChannel.appendLine(`Checking server health at: ${httpUrl}`);
-        const response = await fetch(`${httpUrl}/api/status`, {
-            method: 'GET',
-            signal: AbortSignal.timeout(3000) // 3 second timeout
-        });
-        const isHealthy = response.ok;
-        outputChannel.appendLine(`Server health check: ${isHealthy ? 'OK' : 'FAILED'}`);
-        return isHealthy;
-    } catch (error) {
-        outputChannel.appendLine(`Server health check failed: ${error}`);
-        return false;
-    }
-}
-
-/**
- * Get the Memory server URL. Reads `linggen.memory.url`, falls back to
- * the deprecated `linggen.backend.httpUrl` if the user customised it.
- */
-export function getMemoryUrl(): string {
-    const cfg = vscode.workspace.getConfiguration('linggen');
-    const memoryUrl = cfg.get<string>('memory.url', 'http://localhost:8787');
-    const legacyUrl = cfg.get<string>('backend.httpUrl', 'http://localhost:8787');
-
-    // If the user never touched the new setting but customised the old one, honour legacy
-    const memoryInspect = cfg.inspect<string>('memory.url');
-    const legacyInspect = cfg.inspect<string>('backend.httpUrl');
-    const memoryCustomised =
-        memoryInspect?.workspaceValue !== undefined ||
-        memoryInspect?.workspaceFolderValue !== undefined ||
-        memoryInspect?.globalValue !== undefined;
-    const legacyCustomised =
-        legacyInspect?.workspaceValue !== undefined ||
-        legacyInspect?.workspaceFolderValue !== undefined ||
-        legacyInspect?.globalValue !== undefined;
-
-    if (!memoryCustomised && legacyCustomised) {
-        return legacyUrl.replace(/\/+$/, '');
-    }
-    return memoryUrl.replace(/\/+$/, '');
-}
-
-/**
  * Get the Agent server URL.
  */
 export function getAgentUrl(): string {
@@ -135,4 +88,3 @@ export function getCommentSyntax(languageId: string): { prefix: string; suffix?:
 
     return map[languageId] || doubleSlash;
 }
-

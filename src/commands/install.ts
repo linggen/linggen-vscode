@@ -23,21 +23,15 @@ export async function installLinggen(): Promise<void> {
 }
 
 /**
- * Command: Linggen: Install/Update Linggen (Local)
+ * Command: Linggen: Install/Update Linggen Agent
  *
- * Offers a QuickPick to install Linggen Memory (ling-mem), Linggen Agent (ling),
- * or open the website.
+ * Offers to install Linggen Agent (ling) or open the website.
  */
 export async function installLinggenCli(): Promise<void> {
     const outputChannel = getOutputChannel();
 
     const pick = await vscode.window.showQuickPick(
         [
-            {
-                label: '$(database) Install Linggen Memory (ling-mem)',
-                description: 'Semantic memory, code search, RAG',
-                id: 'memory'
-            },
             {
                 label: '$(rocket) Install Linggen Agent (ling)',
                 description: 'Autonomous coding agent',
@@ -64,12 +58,9 @@ export async function installLinggenCli(): Promise<void> {
         return;
     }
 
-    const isMemory = pick.id === 'memory';
-    const binaryName = isMemory ? 'Linggen Memory (ling-mem)' : 'Linggen Agent (ling)';
-    const installScript = isMemory
-        ? 'curl -fsSL https://linggen.dev/install-mem.sh | bash'
-        : 'curl -fsSL https://linggen.dev/install-agent.sh | bash';
-    const startCmd = isMemory ? 'ling-mem serve' : 'ling serve';
+    const binaryName = 'Linggen Agent (ling)';
+    const installScript = 'curl -fsSL https://linggen.dev/install-agent.sh | bash';
+    const startCmd = 'ling serve';
 
     const choice = await vscode.window.showWarningMessage(
         `${binaryName} will be installed by running:\n\n${installScript}`,
