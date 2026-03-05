@@ -91,8 +91,10 @@ export async function cancelRun(
     runId: string
 ): Promise<{ cancelled_run_ids: string[] }> {
     const base = agentUrl.replace(/\/+$/, '');
-    const res = await fetch(`${base}/api/agent-runs/${encodeURIComponent(runId)}/cancel`, {
+    const res = await fetch(`${base}/api/agent-cancel`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ run_id: runId }),
         signal: AbortSignal.timeout(10000)
     });
     if (!res.ok) {
@@ -116,6 +118,56 @@ export async function listAgents(
     }
     const json = (await res.json()) as { agents?: Agent[] };
     return json.agents ?? [];
+}
+
+export interface ModelInfo {
+    id: string;
+    provider: string;
+    model: string;
+}
+
+export async function listModels(agentUrl: string): Promise<ModelInfo[]> {
+    const base = agentUrl.replace(/\/+$/, '');
+    const res = await fetch(`${base}/api/models`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(10000)
+    });
+    if (!res.ok) {
+        throw new Error(`GET /api/models returned ${res.status}`);
+    }
+    return (await res.json()) as ModelInfo[];
+}
+
+export async function setDefaultModel(agentUrl: string, modelId: string): Promise<void> {
+    const base = agentUrl.replace(/\/+$/, '');
+    // GET current config
+    const configRes = await fetch(`${base}/api/config`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(10000)
+    });
+    if (!configRes.ok) {
+        throw new Error(`GET /api/config returned ${configRes.status}`);
+    }
+    const config = (await configRes.json()) as Record<string, unknown>;
+
+    // Reorder routing.default_models: chosen model first
+    const routing = (config.routing ?? {}) as Record<string, unknown>;
+    const existing = (routing.default_models ?? []) as string[];
+    const newList = [modelId, ...existing.filter(m => m !== modelId)];
+    routing.default_models = newList;
+    config.routing = routing;
+
+    // POST updated config
+    const postRes = await fetch(`${base}/api/config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config),
+        signal: AbortSignal.timeout(10000)
+    });
+    if (!postRes.ok) {
+        const text = await postRes.text();
+        throw new Error(`POST /api/config returned ${postRes.status}: ${text}`);
+    }
 }
 
 // ── SSE Event Stream ─────────────────────────────────────────────────

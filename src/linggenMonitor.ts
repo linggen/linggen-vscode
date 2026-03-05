@@ -6,7 +6,7 @@ import { BackendMonitor } from './healthMonitor';
 const CONTEXT_IS_LOCAL_SERVER = 'linggen.isLocalServer';
 
 /**
- * Background monitor that checks the Linggen Agent server.
+ * Background monitor that checks the Linggen server.
  * - Shows status bar: `Linggen: ✓` / `Linggen: ✗`
  * - Sets context key: `linggen.agentRunning`
  * - Click → QuickPick showing backend status
@@ -61,7 +61,7 @@ export function startLinggenHealthMonitor(
             {
                 label: `$(server) Agent: ${agentMonitor.healthy ? 'running' : 'offline'}`,
                 description: agentMonitor.url,
-                detail: 'Linggen Agent server (ling)'
+                detail: 'Linggen server (ling)'
             }
         ];
         await vscode.window.showQuickPick(items, {

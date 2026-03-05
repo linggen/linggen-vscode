@@ -1,9 +1,17 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import * as os from 'os';
-import AdmZip from 'adm-zip';
 import { getOutputChannel } from '../output';
+
+const ANCHOR_RULE_CONTENT = `# Linggen Anchor System
+
+Code files in this project may contain \`// linggen anchor: <repo-relative-path>\` comments.
+These comments point to anchor files under \`.linggen/anchor/\` (Markdown files with structured context).
+
+When you encounter a \`linggen anchor:\` comment, read the referenced file to understand the
+context, constraints, and conventions it describes. Treat anchor content as authoritative
+project knowledge that should inform your code generation and suggestions.
+`;
 
 /**
  * Command: Linggen: Bootstrap AI Rules
@@ -20,9 +28,9 @@ export async function bootstrapRules(context: vscode.ExtensionContext): Promise<
 
     const rootPath = workspaceFolders[0].uri.fsPath;
     const appName = vscode.env.appName.toLowerCase();
-    
-    // Always bootstrap Claude skills
-    await bootstrapSkills(context, rootPath);
+
+    // Clean up old skill artifacts
+    cleanupOldSkills(rootPath);
 
     // Bootstrap CLAUDE.md for Claude Code users
     await bootstrapClaudeMd(rootPath);
@@ -34,7 +42,7 @@ export async function bootstrapRules(context: vscode.ExtensionContext): Promise<
     if (appName.includes('cursor')) {
         const cursorRulesDir = path.join(rootPath, '.cursor', 'rules');
         rulePath = path.join(cursorRulesDir, 'linggen.md');
-        
+
         // Ensure .cursor/rules directory exists
         try {
             if (!fs.existsSync(cursorRulesDir)) {
@@ -50,7 +58,7 @@ export async function bootstrapRules(context: vscode.ExtensionContext): Promise<
     } else if (appName.includes('antigravity')) {
         const antigravityDir = path.join(rootPath, '.antigravity');
         rulePath = path.join(antigravityDir, 'rules.md');
-        
+
         // Ensure .antigravity directory exists
         try {
             if (!fs.existsSync(antigravityDir)) {
@@ -68,52 +76,9 @@ export async function bootstrapRules(context: vscode.ExtensionContext): Promise<
         rulePath = path.join(rootPath, 'AGENTS.md');
     }
 
-    const localSkillPath = path.join(rootPath, '.linggen', 'skills', 'memory.md');
-    const officialSkillPath = path.join(rootPath, '.linggen', 'skills', 'official', 'memory.md');
+    const content = ANCHOR_RULE_CONTENT;
 
-    // 1. Determine the content
-    let content = '';
-    const sourcePath = fs.existsSync(localSkillPath) ? localSkillPath : (fs.existsSync(officialSkillPath) ? officialSkillPath : null);
-    
-    if (sourcePath) {
-        // Copy the whole content of the local skill
-        try {
-            content = fs.readFileSync(sourcePath, 'utf8');
-            outputChannel.appendLine(`Found local Linggen skill at ${sourcePath}. Syncing content to AI rules.`);
-        } catch (error) {
-            outputChannel.appendLine(`Error reading local skill at ${sourcePath}: ${error}`);
-        }
-    }
-
-    if (!content) {
-        // Use the bootstrapped Claude/Codex skill as the default template (preferred).
-        // This comes from the public skills repo and keeps rules consistent across environments.
-        const bootstrappedSkillPath = path.join(rootPath, '.claude', 'skills', 'memory', 'SKILL.md');
-        const templatePath = fs.existsSync(bootstrappedSkillPath)
-            ? bootstrappedSkillPath
-            : path.join(context.extensionPath, 'assets', 'skills', 'memory', 'SKILL.md');
-        try {
-            if (fs.existsSync(templatePath)) {
-                content = fs.readFileSync(templatePath, 'utf8');
-                outputChannel.appendLine(`Project not Linggen-aware. Syncing with skill template.`);
-            } else {
-                // Fallback if template is missing
-                content = `---
-description: Activates Linggen Skill.
-globs: ["**/*"]
----
-
-Follow Linggen Skill instructions via shell scripts.
-`;
-                outputChannel.appendLine(`Template not found at ${templatePath}. Using minimal fallback.`);
-            }
-        } catch (error) {
-            outputChannel.appendLine(`Error reading template: ${error}`);
-            return;
-        }
-    }
-
-    // 2. Check if the rule already exists and is identical
+    // Check if the rule already exists and is identical
     const ruleAlreadyExists = fs.existsSync(rulePath);
     if (ruleAlreadyExists) {
         try {
@@ -128,13 +93,13 @@ Follow Linggen Skill instructions via shell scripts.
         }
     }
 
-    // 3. Write the file
+    // Write the file
     try {
         fs.writeFileSync(rulePath, content, 'utf8');
         outputChannel.appendLine(`Successfully synced Linggen rule at ${rulePath} (IDE: ${vscode.env.appName})`);
-        
+
         // Optional: notify the user on first-time bootstrap
-        if (!fs.existsSync(localSkillPath) && !ruleAlreadyExists) {
+        if (!ruleAlreadyExists) {
              vscode.window.showInformationMessage(
                 `Linggen: Bootstrapped ${path.basename(rulePath)} to help the AI understand your project context.`,
                 'Open Rule'
@@ -151,164 +116,56 @@ Follow Linggen Skill instructions via shell scripts.
     }
 }
 
-/**
- * Ensures that the project has the latest Linggen skills for Claude Code.
- */
-async function bootstrapSkills(context: vscode.ExtensionContext, rootPath: string): Promise<void> {
-    const outputChannel = getOutputChannel();
-    const targetSkillsDir = path.join(rootPath, '.claude', 'skills', 'memory');
-    const targetScriptsDir = path.join(targetSkillsDir, 'scripts');
-
-    try {
-        // Create directories
-        if (!fs.existsSync(targetScriptsDir)) {
-            fs.mkdirSync(targetScriptsDir, { recursive: true });
-        }
-
-        // Prefer bootstrapping from the public skills repo so users can use Linggen outside VS Code.
-        // Repo: https://github.com/linggen/skills
-        const owner = 'linggen';
-        const repo = 'skills';
-        const ref = 'main';
-        const zipUrl = `https://codeload.github.com/${owner}/${repo}/zip/${ref}`;
-
-        outputChannel.appendLine(`Bootstrapping memory skill from ${owner}/${repo} (ref: ${ref})`);
-
-        // Download zipball
-        const response = await fetch(zipUrl);
-        if (!response.ok) {
-            throw new Error(`GitHub returned ${response.status}: ${response.statusText}`);
-        }
-        const arrayBuffer = await response.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-
-        // Write to temp and extract
-        const tempZipPath = path.join(os.tmpdir(), `linggen-skills-${Date.now()}.zip`);
-        fs.writeFileSync(tempZipPath, buffer);
-
-        const zip = new AdmZip(tempZipPath);
-        const zipEntries = zip.getEntries();
-
-        // Find the memory skill root in the zip. Supported layouts:
-        // - skills/memory/SKILL.md
-        // - memory/SKILL.md
-        // The zip has a top-level prefix like "<repo>-<ref>/...".
-        let skillRootInZip: string | null = null;
-        for (const entry of zipEntries) {
-            const entryName = entry.entryName;
-            if (
-                entryName.endsWith('/skills/memory/SKILL.md') ||
-                entryName.endsWith('/skills/memory/skill.md') ||
-                entryName.endsWith('/memory/SKILL.md') ||
-                entryName.endsWith('/memory/skill.md')
-            ) {
-                skillRootInZip = path.dirname(entryName);
-                break;
-            }
-        }
-
-        if (!skillRootInZip) {
-            throw new Error(`Could not find memory SKILL.md in ${owner}/${repo}. Expected skills/memory/SKILL.md.`);
-        }
-
-        // Clear the existing skill directory to ensure scripts/docs stay in sync.
-        if (fs.existsSync(targetSkillsDir)) {
-            fs.rmSync(targetSkillsDir, { recursive: true, force: true });
-        }
-        fs.mkdirSync(targetScriptsDir, { recursive: true });
-
-        // Extract files under the skill root into .claude/skills/memory
-        const skillRootPrefix = skillRootInZip + '/';
-        for (const entry of zipEntries) {
-            if (entry.isDirectory) {
-                continue;
-            }
-            if (!entry.entryName.startsWith(skillRootPrefix)) {
-                continue;
-            }
-
-            const relativePath = entry.entryName.substring(skillRootPrefix.length);
-            if (!relativePath || relativePath.includes('..') || relativePath.startsWith('/')) {
-                continue;
-            }
-
-            const destPath = path.join(targetSkillsDir, relativePath);
-            const destDir = path.dirname(destPath);
-            if (!fs.existsSync(destDir)) {
-                fs.mkdirSync(destDir, { recursive: true });
-            }
-            fs.writeFileSync(destPath, entry.getData());
-        }
-
-        // Cleanup temp file
-        try {
-            fs.unlinkSync(tempZipPath);
-        } catch {
-            // ignore
-        }
-
-        // Set executable permissions for scripts (best-effort, may fail on Windows).
-        try {
-            if (fs.existsSync(targetScriptsDir)) {
-                const scripts = fs.readdirSync(targetScriptsDir);
-                for (const script of scripts) {
-                    const scriptTarget = path.join(targetScriptsDir, script);
-                    try {
-                        fs.chmodSync(scriptTarget, 0o755);
-                    } catch (chmodError) {
-                        outputChannel.appendLine(`Failed to set executable permissions for ${scriptTarget}: ${chmodError}`);
-                    }
-                }
-            }
-        } catch (e) {
-            outputChannel.appendLine(`Failed to enumerate scripts for chmod: ${e}`);
-        }
-
-        outputChannel.appendLine(`Successfully bootstrapped memory skill at ${targetSkillsDir}`);
-    } catch (error) {
-        outputChannel.appendLine(`Failed to bootstrap memory skill: ${error}`);
-    }
-}
+const ANCHOR_AWARE_REF = `When code files contain \`// linggen anchor: <path>\` comments, read the referenced anchor file under \`.linggen/anchor/\` for context.`;
 
 /**
- * Ensures that CLAUDE.md exists and references the Linggen skill.
- * This helps Claude Code discover the .linggen folder with memory, policy, etc.
+ * Ensures that CLAUDE.md exists and references the Linggen anchor system.
  */
 async function bootstrapClaudeMd(rootPath: string): Promise<void> {
     const outputChannel = getOutputChannel();
     const claudeMdPath = path.join(rootPath, 'CLAUDE.md');
-    const linggenSkillRef = 'Please read `.claude/skills/memory/SKILL.md` on load to understand the Linggen Memory skill and context management system.';
-    const oldSkillRef = '.claude/skills/linggen/SKILL.md';
+
+    // Old references to migrate away from
+    const oldSkillRefs = [
+        '.claude/skills/memory/SKILL.md',
+        '.claude/skills/linggen/SKILL.md'
+    ];
 
     try {
         if (fs.existsSync(claudeMdPath)) {
             let content = fs.readFileSync(claudeMdPath, 'utf8');
+            let modified = false;
 
-            // Migrate old reference if present
-            if (content.includes(oldSkillRef)) {
-                content = content.replace(oldSkillRef, '.claude/skills/memory/SKILL.md');
-                fs.writeFileSync(claudeMdPath, content, 'utf8');
-                outputChannel.appendLine(`Migrated CLAUDE.md from old linggen skill to memory skill`);
+            // Migrate old skill references
+            for (const oldRef of oldSkillRefs) {
+                if (content.includes(oldRef)) {
+                    // Replace the line containing the old reference
+                    content = content.replace(
+                        new RegExp(`.*${oldRef.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}.*\\n?`, 'g'),
+                        ''
+                    );
+                    modified = true;
+                }
+            }
+
+            if (content.includes('linggen anchor:')) {
+                // Already has anchor awareness
+                if (modified) {
+                    fs.writeFileSync(claudeMdPath, content, 'utf8');
+                    outputChannel.appendLine(`Migrated CLAUDE.md: removed old skill references`);
+                }
                 return;
             }
 
-            if (content.includes('.claude/skills/memory/SKILL.md')) {
-                // Already configured
-                return;
-            }
-
-            // Append the reference
-            const updatedContent = content.trimEnd() + '\n\n' + linggenSkillRef + '\n';
+            // Append anchor awareness
+            const updatedContent = content.trimEnd() + '\n\n' + ANCHOR_AWARE_REF + '\n';
             fs.writeFileSync(claudeMdPath, updatedContent, 'utf8');
-            outputChannel.appendLine(`Updated CLAUDE.md with memory skill reference`);
+            outputChannel.appendLine(`Updated CLAUDE.md with anchor awareness`);
         } else {
-            // Create new CLAUDE.md with memory skill reference
-            const newContent = `# Claude Code Instructions
-
-${linggenSkillRef}
-`;
+            // Create new CLAUDE.md
+            const newContent = `# Claude Code Instructions\n\n${ANCHOR_AWARE_REF}\n`;
             fs.writeFileSync(claudeMdPath, newContent, 'utf8');
-            outputChannel.appendLine(`Created CLAUDE.md with memory skill reference`);
+            outputChannel.appendLine(`Created CLAUDE.md with anchor awareness`);
         }
     } catch (error) {
         outputChannel.appendLine(`Failed to bootstrap CLAUDE.md: ${error}`);
@@ -316,55 +173,94 @@ ${linggenSkillRef}
 }
 
 /**
- * Ensures that AGENTS.md exists and references the Linggen skill.
+ * Ensures that AGENTS.md exists and references the Linggen anchor system.
  * Preserves user content and only appends the reference if missing.
  */
 async function bootstrapAgentsMd(rootPath: string): Promise<void> {
     const outputChannel = getOutputChannel();
     const claudeMdPath = path.join(rootPath, 'CLAUDE.md');
     const agentsMdPath = path.join(rootPath, 'AGENTS.md');
-    const linggenSkillRef = 'Please read `.claude/skills/memory/SKILL.md` on load to understand the Linggen Memory skill and context management system.';
-    const oldSkillRef = '.claude/skills/linggen/SKILL.md';
+
+    // Old references to migrate away from
+    const oldSkillRefs = [
+        '.claude/skills/memory/SKILL.md',
+        '.claude/skills/linggen/SKILL.md'
+    ];
 
     try {
         if (fs.existsSync(agentsMdPath)) {
             let existingContent = fs.readFileSync(agentsMdPath, 'utf8');
+            let modified = false;
 
-            // Migrate old reference if present
-            if (existingContent.includes(oldSkillRef)) {
-                existingContent = existingContent.replace(oldSkillRef, '.claude/skills/memory/SKILL.md');
-                fs.writeFileSync(agentsMdPath, existingContent, 'utf8');
-                outputChannel.appendLine(`Migrated AGENTS.md from old linggen skill to memory skill`);
+            // Migrate old skill references
+            for (const oldRef of oldSkillRefs) {
+                if (existingContent.includes(oldRef)) {
+                    existingContent = existingContent.replace(
+                        new RegExp(`.*${oldRef.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}.*\\n?`, 'g'),
+                        ''
+                    );
+                    modified = true;
+                }
+            }
+
+            if (existingContent.includes('linggen anchor:')) {
+                if (modified) {
+                    fs.writeFileSync(agentsMdPath, existingContent, 'utf8');
+                    outputChannel.appendLine(`Migrated AGENTS.md: removed old skill references`);
+                }
                 return;
             }
 
-            if (existingContent.includes('.claude/skills/memory/SKILL.md')) {
-                return;
-            }
-            const updatedContent = existingContent.trimEnd() + '\n\n' + linggenSkillRef + '\n';
+            const updatedContent = existingContent.trimEnd() + '\n\n' + ANCHOR_AWARE_REF + '\n';
             fs.writeFileSync(agentsMdPath, updatedContent, 'utf8');
-            outputChannel.appendLine(`Updated AGENTS.md with memory skill reference`);
+            outputChannel.appendLine(`Updated AGENTS.md with anchor awareness`);
             return;
         }
 
         let newContent = '';
         if (fs.existsSync(claudeMdPath)) {
             const claudeContent = fs.readFileSync(claudeMdPath, 'utf8');
-            if (claudeContent.includes('.claude/skills/memory/SKILL.md')) {
+            if (claudeContent.includes('linggen anchor:')) {
                 newContent = claudeContent;
             } else {
-                newContent = claudeContent.trimEnd() + '\n\n' + linggenSkillRef + '\n';
+                newContent = claudeContent.trimEnd() + '\n\n' + ANCHOR_AWARE_REF + '\n';
             }
         } else {
-            newContent = `# Claude Code Instructions
-
-${linggenSkillRef}
-`;
+            newContent = `# Claude Code Instructions\n\n${ANCHOR_AWARE_REF}\n`;
         }
 
         fs.writeFileSync(agentsMdPath, newContent, 'utf8');
-        outputChannel.appendLine(`Created AGENTS.md with memory skill reference`);
+        outputChannel.appendLine(`Created AGENTS.md with anchor awareness`);
     } catch (error) {
         outputChannel.appendLine(`Failed to bootstrap AGENTS.md: ${error}`);
+    }
+}
+
+/**
+ * Remove old skill artifacts that are no longer needed.
+ */
+function cleanupOldSkills(rootPath: string): void {
+    const outputChannel = getOutputChannel();
+    const oldSkillDir = path.join(rootPath, '.claude', 'skills', 'memory');
+
+    try {
+        if (fs.existsSync(oldSkillDir)) {
+            fs.rmSync(oldSkillDir, { recursive: true, force: true });
+            outputChannel.appendLine(`Removed old skill directory: ${oldSkillDir}`);
+
+            // Clean up parent if empty
+            const skillsDir = path.join(rootPath, '.claude', 'skills');
+            try {
+                const remaining = fs.readdirSync(skillsDir);
+                if (remaining.length === 0) {
+                    fs.rmdirSync(skillsDir);
+                    outputChannel.appendLine(`Removed empty skills directory: ${skillsDir}`);
+                }
+            } catch {
+                // ignore
+            }
+        }
+    } catch (error) {
+        outputChannel.appendLine(`Failed to clean up old skills: ${error}`);
     }
 }

@@ -47,7 +47,7 @@ export async function agentRuns(): Promise<void> {
     });
 
     const selected = await vscode.window.showQuickPick(items, {
-        title: 'Linggen Agent Runs',
+        title: 'Linggen Runs',
         placeHolder: 'Select a run to view details or cancel'
     });
 

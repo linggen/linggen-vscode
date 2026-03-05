@@ -1,32 +1,32 @@
 import * as vscode from 'vscode';
 import { getCommentSyntax } from '../helpers';
 
-interface MemoryItem extends vscode.QuickPickItem {
+interface AnchorItem extends vscode.QuickPickItem {
     id?: string;
 }
 
-async function listMemories(workspaceFolder: vscode.WorkspaceFolder): Promise<MemoryItem[]> {
-    const items: MemoryItem[] = [];
+async function listAnchors(workspaceFolder: vscode.WorkspaceFolder): Promise<AnchorItem[]> {
+    const items: AnchorItem[] = [];
     try {
-        const pattern = new vscode.RelativePattern(workspaceFolder, '.linggen/memory/**/*.md');
+        const pattern = new vscode.RelativePattern(workspaceFolder, '.linggen/anchor/**/*.md');
         const files = await vscode.workspace.findFiles(pattern);
-        
+
         for (const fileUri of files) {
             const data = await vscode.workspace.fs.readFile(fileUri);
             const text = new TextDecoder().decode(data);
-            
+
             const nameMatch = text.match(/name:\s*(.*)/);
             const summaryMatch = text.match(/summary:\s*(.*)/);
-            
-            // Extract identifier for the comment. 
+
+            // Extract identifier for the comment.
             // We now prefer using the filename (e.g. test.md) as the reference.
             const fileName = fileUri.path.split('/').pop() || '';
-            const id = fileName; 
+            const id = fileName;
 
             const nameWithoutExt = fileName.replace(/\.md$/, '');
             const name = nameMatch ? nameMatch[1].trim() : (summaryMatch ? summaryMatch[1].trim() : nameWithoutExt);
             const summary = summaryMatch ? summaryMatch[1].trim() : '';
-            
+
             items.push({
                 label: `$(markdown) ${name}`,
                 description: summary,
@@ -41,8 +41,8 @@ async function listMemories(workspaceFolder: vscode.WorkspaceFolder): Promise<Me
 }
 
 type PinAction =
-    | 'createMemory'
-    | 'linkMemory'
+    | 'createAnchor'
+    | 'linkAnchor'
     | 'anchorInput'
     | 'anchorFile'
     | 'anchorFolder'
@@ -50,7 +50,7 @@ type PinAction =
 
 interface PinItem extends vscode.QuickPickItem {
     action: PinAction;
-    memoryId?: string;
+    anchorId?: string;
     repoPath?: string;
 }
 
@@ -154,10 +154,10 @@ async function insertLinggenComment(editor: vscode.TextEditor, commentBase: stri
     });
 }
 
-export async function pinToMemory(editor: vscode.TextEditor): Promise<void> {
+export async function pinToAnchor(editor: vscode.TextEditor): Promise<void> {
     const doc = editor.document;
     if (doc.isUntitled) {
-        vscode.window.showErrorMessage('Please save the file before pinning to memory.');
+        vscode.window.showErrorMessage('Please save the file before pinning an anchor.');
         return;
     }
 
@@ -169,12 +169,12 @@ export async function pinToMemory(editor: vscode.TextEditor): Promise<void> {
 
     const sel = editor.selection;
 
-    const existingMemories = await listMemories(workspaceFolder);
+    const existingAnchors = await listAnchors(workspaceFolder);
 
     const quickPick = vscode.window.createQuickPick<PinItem>();
-    quickPick.title = 'Linggen: Pin to Memory';
-    quickPick.placeholder = 'Type a note to create a memory, type a repo path to anchor, or select an existing memory';
-    
+    quickPick.title = 'Linggen: Pin to Anchor';
+    quickPick.placeholder = 'Type a note to create an anchor, type a repo path to anchor, or select an existing anchor';
+
     let refreshToken = 0;
     const updateItems = async () => {
         const token = ++refreshToken;
@@ -191,26 +191,26 @@ export async function pinToMemory(editor: vscode.TextEditor): Promise<void> {
         const suggestions = await getAnchorSuggestions(workspaceFolder, value, 50);
         if (token !== refreshToken) return;
 
-        const createNewMemoryItem: PinItem = {
-            label: trimmed ? `$(plus) Create New Memory: "${trimmed}"` : '$(plus) Create New Memory...',
-            description: 'Create a new memory file from template',
-            action: 'createMemory',
+        const createNewAnchorItem: PinItem = {
+            label: trimmed ? `$(plus) Create New Anchor: "${trimmed}"` : '$(plus) Create New Anchor...',
+            description: 'Create a new anchor file from template',
+            action: 'createAnchor',
             alwaysShow: true
         };
 
-        const memoryItems: PinItem[] = existingMemories.map(m => ({
+        const anchorItems: PinItem[] = existingAnchors.map(m => ({
             ...m,
-            action: 'linkMemory',
-            memoryId: (m as MemoryItem).id
+            action: 'linkAnchor',
+            anchorId: (m as AnchorItem).id
         }));
 
         quickPick.items = [
             { label: 'Anchor', action: 'separator', kind: vscode.QuickPickItemKind.Separator },
             anchorInputItem,
             ...suggestions,
-            { label: 'Memories', action: 'separator', kind: vscode.QuickPickItemKind.Separator },
-            createNewMemoryItem,
-            ...memoryItems
+            { label: 'Anchors', action: 'separator', kind: vscode.QuickPickItemKind.Separator },
+            createNewAnchorItem,
+            ...anchorItems
         ];
     };
 
@@ -243,31 +243,31 @@ export async function pinToMemory(editor: vscode.TextEditor): Promise<void> {
         return;
     }
 
-    if (selected.action === 'createMemory') {
-        let memoryName = quickPick.value.trim();
-        
-        if (!memoryName) {
-            memoryName = await vscode.window.showInputBox({
-                title: 'Linggen: Create New Memory',
-                prompt: 'Enter a name for this memory',
+    if (selected.action === 'createAnchor') {
+        let anchorName = quickPick.value.trim();
+
+        if (!anchorName) {
+            anchorName = await vscode.window.showInputBox({
+                title: 'Linggen: Create New Anchor',
+                prompt: 'Enter a name for this anchor',
                 placeHolder: 'e.g. DashMap usage rules',
                 ignoreFocusOut: true
             }) || '';
-            
-            if (memoryName === '') {
+
+            if (anchorName === '') {
                 return; // cancelled
             }
         }
 
         const code = sel.isEmpty ? '' : doc.getText(sel);
-        const dirUri = vscode.Uri.joinPath(workspaceFolder.uri, '.linggen', 'memory');
-        
+        const dirUri = vscode.Uri.joinPath(workspaceFolder.uri, '.linggen', 'anchor');
+
         // Use user input as filename directly, sanitized.
-        let baseName = (memoryName.trim() || 'memory').replace(/[^\w.-]+/g, '_');
+        let baseName = (anchorName.trim() || 'anchor').replace(/[^\w.-]+/g, '_');
         if (!baseName.toLowerCase().endsWith('.md')) {
             baseName += '.md';
         }
-        
+
         const fileUri = vscode.Uri.joinPath(dirUri, baseName);
         const referenceId = baseName;
 
@@ -275,13 +275,13 @@ export async function pinToMemory(editor: vscode.TextEditor): Promise<void> {
 
         const templateLines = [
             '---',
-            `name: ${memoryName.trim() || 'Untitled'}`,
+            `name: ${anchorName.trim() || 'Untitled'}`,
             `scope: ${doc.languageId || 'text'}`,
             'summary: ',
             'tags: []',
             '---',
             '',
-            'Write your memory details here...',
+            'Write your anchor details here...',
             ''
         ];
 
@@ -296,23 +296,23 @@ export async function pinToMemory(editor: vscode.TextEditor): Promise<void> {
         }
 
         await vscode.workspace.fs.writeFile(fileUri, new TextEncoder().encode(templateLines.join('\n')));
-        
-        await insertLinggenComment(editor, `linggen memory: ${referenceId}`);
+
+        await insertLinggenComment(editor, `linggen anchor: ${referenceId}`);
 
         // Open the newly created file for editing
-        const memoryDoc = await vscode.workspace.openTextDocument(fileUri);
-        await vscode.window.showTextDocument(memoryDoc, vscode.ViewColumn.Active);
-        
-        vscode.window.showInformationMessage(`Linggen: created and opened memory template (${referenceId}).`);
+        const anchorDoc = await vscode.workspace.openTextDocument(fileUri);
+        await vscode.window.showTextDocument(anchorDoc, vscode.ViewColumn.Active);
+
+        vscode.window.showInformationMessage(`Linggen: created and opened anchor template (${referenceId}).`);
         return;
     }
 
-    if (selected.action === 'linkMemory') {
-        const referenceId = selected.memoryId;
+    if (selected.action === 'linkAnchor') {
+        const referenceId = selected.anchorId;
         if (!referenceId) return;
 
-        await insertLinggenComment(editor, `linggen memory: ${referenceId}`);
-        vscode.window.showInformationMessage(`Linggen: linked to memory (${referenceId}).`);
+        await insertLinggenComment(editor, `linggen anchor: ${referenceId}`);
+        vscode.window.showInformationMessage(`Linggen: linked to anchor (${referenceId}).`);
         return;
     }
 

@@ -23,9 +23,9 @@ export async function installLinggen(): Promise<void> {
 }
 
 /**
- * Command: Linggen: Install/Update Linggen Agent
+ * Command: Linggen: Install/Update
  *
- * Offers to install Linggen Agent (ling) or open the website.
+ * Offers to install Linggen (ling) or open the website.
  */
 export async function installLinggenCli(): Promise<void> {
     const outputChannel = getOutputChannel();
@@ -33,7 +33,7 @@ export async function installLinggenCli(): Promise<void> {
     const pick = await vscode.window.showQuickPick(
         [
             {
-                label: '$(rocket) Install Linggen Agent (ling)',
+                label: '$(rocket) Install Linggen (ling)',
                 description: 'Autonomous coding agent',
                 id: 'agent'
             },
@@ -58,7 +58,7 @@ export async function installLinggenCli(): Promise<void> {
         return;
     }
 
-    const binaryName = 'Linggen Agent (ling)';
+    const binaryName = 'Linggen (ling)';
     const installScript = 'curl -fsSL https://linggen.dev/install-agent.sh | bash';
     const startCmd = 'ling serve';
 

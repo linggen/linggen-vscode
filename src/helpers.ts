@@ -26,7 +26,7 @@ export function isLocalServer(httpUrl: string): boolean {
  */
 export function getAgentUrl(): string {
     const cfg = vscode.workspace.getConfiguration('linggen');
-    return cfg.get<string>('agent.url', 'http://localhost:6666').replace(/\/+$/, '');
+    return cfg.get<string>('agent.url', 'http://localhost:9898').replace(/\/+$/, '');
 }
 
 /**

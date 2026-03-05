@@ -6,7 +6,7 @@ import { getAgentChatWebviewHtml } from '../agentChatWebview';
 
 /**
  * Command: Linggen: Chat with Agent
- * Opens a webview panel for chatting with the Linggen Agent.
+ * Opens a webview panel for chatting with the Linggen server.
  */
 export async function agentChat(): Promise<void> {
     const output = getOutputChannel();
@@ -32,7 +32,7 @@ export async function agentChat(): Promise<void> {
     // Create webview panel
     const panel = vscode.window.createWebviewPanel(
         'linggenAgentChat',
-        'Linggen Agent Chat',
+        'Linggen Chat',
         vscode.ViewColumn.Beside,
         {
             enableScripts: true,
@@ -63,13 +63,19 @@ export async function agentChat(): Promise<void> {
                     });
                     break;
                 case 'activity':
-                    panel.webview.postMessage({
-                        type: 'activity',
-                        text: event.phase ?? event.text ?? ''
-                    });
+                    if (event.phase === 'done') {
+                        panel.webview.postMessage({
+                            type: 'agentDone',
+                            text: 'Done'
+                        });
+                    } else {
+                        panel.webview.postMessage({
+                            type: 'activity',
+                            text: event.phase ?? event.text ?? ''
+                        });
+                    }
                     break;
                 case 'run_complete':
-                case 'done':
                     panel.webview.postMessage({
                         type: 'agentDone',
                         text: 'Done'

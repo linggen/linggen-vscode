@@ -4,10 +4,9 @@ import { installLinggenCli } from './commands/install';
 import { startLinggenHealthMonitor } from './linggenMonitor';
 import { bootstrapRules } from './commands/bootstrapRules';
 import { browseOnlineSkills } from './commands/browseOnlineSkills';
-import { pinToMemory } from './commands/pinToMemory';
-import { LinggenMemoryProvider, openMemory } from './linggenMemoryProvider';
+import { pinToAnchor } from './commands/pinToAnchor';
 import { LinggenAnchorProvider, openAnchor } from './linggenAnchorProvider';
-import { agentChat } from './commands/agentChat';
+import { ChatViewProvider } from './chatViewProvider';
 import { agentRuns } from './commands/agentRuns';
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -17,23 +16,24 @@ export function activate(context: vscode.ExtensionContext): void {
     // Bootstrap rules automatically on project open
     void bootstrapRules(context);
 
-    const memoryProvider = new LinggenMemoryProvider();
     const anchorProvider = new LinggenAnchorProvider();
     context.subscriptions.push(
-        vscode.languages.registerCodeLensProvider({ scheme: 'file' }, memoryProvider),
-        vscode.languages.registerInlayHintsProvider({ scheme: 'file' }, memoryProvider),
         vscode.languages.registerCodeLensProvider({ scheme: 'file' }, anchorProvider),
         vscode.languages.registerDocumentLinkProvider({ scheme: 'file' }, anchorProvider)
     );
 
+    // Register chat view and move to secondary sidebar on first activation
+    const chatProvider = new ChatViewProvider(context.extensionUri);
+    context.subscriptions.push(
+        vscode.window.registerWebviewViewProvider(ChatViewProvider.viewType, chatProvider)
+    );
+
+
     // Register commands
     context.subscriptions.push(
         vscode.commands.registerCommand('linggen.installCli', () => installLinggenCli()),
-        vscode.commands.registerTextEditorCommand('linggen.pinToMemory', (editor) =>
-            pinToMemory(editor)
-        ),
-        vscode.commands.registerCommand('linggen.openMemory', (hash: string) =>
-            openMemory(hash)
+        vscode.commands.registerTextEditorCommand('linggen.pinToAnchor', (editor) =>
+            pinToAnchor(editor)
         ),
         vscode.commands.registerCommand('linggen.openAnchor', (repoPath: string) =>
             openAnchor(repoPath)
@@ -41,7 +41,9 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.registerCommand('linggen.browseOnlineSkills', () =>
             browseOnlineSkills(context)
         ),
-        vscode.commands.registerCommand('linggen.agentChat', () => agentChat()),
+        vscode.commands.registerCommand('linggen.agentChat', () => {
+            void vscode.commands.executeCommand('linggen.chatView.focus');
+        }),
         vscode.commands.registerCommand('linggen.agentListRuns', () => agentRuns()),
         startLinggenHealthMonitor(context)
     );

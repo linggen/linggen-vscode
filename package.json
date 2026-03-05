@@ -1,7 +1,7 @@
 {
   "name": "linggen-vscode",
   "displayName": "Linggen",
-  "description": "AI coding agent extension for VS Code. Connects to Linggen Agent (ling) for autonomous coding, persistent memory, and skill management.",
+  "description": "VS Code extension for Linggen — your Personal AI OS. Connects to ling for autonomous coding, anchored context, and skill management.",
   "version": "0.7.0",
   "publisher": "linggen",
   "homepage": "https://linggen.dev",
@@ -24,34 +24,62 @@
     "commands": [
       {
         "command": "linggen.installCli",
-        "title": "Linggen: Install/Update Agent (ling)",
-        "description": "Install or update Linggen Agent (ling)"
+        "category": "🌀Linggen",
+        "title": "Install/Update (ling)",
+        "description": "Install or update Linggen (ling)"
       },
       {
-        "command": "linggen.pinToMemory",
-        "title": "Linggen: Pin to Memory"
+        "command": "linggen.pinToAnchor",
+        "category": "🌀Linggen",
+        "title": "Pin to Anchor",
+        "shortTitle": "Pin to Anchor"
       },
       {
-        "command": "linggen.openMemory",
-        "title": "Linggen: Open Memory"
+        "command": "linggen.openAnchor",
+        "category": "🌀Linggen",
+        "title": "Open Anchor",
+        "shortTitle": "Open Anchor"
       },
       {
         "command": "linggen.browseOnlineSkills",
-        "title": "Linggen: Browse Online Skills"
+        "category": "🌀Linggen",
+        "title": "Browse Online Skills",
+        "shortTitle": "Browse Online Skills"
       },
       {
         "command": "linggen.agentChat",
-        "title": "Linggen: Chat with Agent"
+        "category": "🌀Linggen",
+        "title": "Chat with Agent",
+        "shortTitle": "Chat with Agent"
       },
       {
         "command": "linggen.agentListRuns",
-        "title": "Linggen: Agent Runs"
+        "category": "🌀Linggen",
+        "title": "Agent Runs"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "linggen-sidebar",
+          "title": "Linggen",
+          "icon": "assets/icon.png"
+        }
+      ]
+    },
+    "views": {
+      "linggen-sidebar": [
+        {
+          "type": "webview",
+          "id": "linggen.chatView",
+          "name": "Chat"
+        }
+      ]
+    },
     "submenus": [
       {
         "id": "linggen.menu",
-        "label": "Linggen"
+        "label": "🌀 Linggen"
       }
     ],
     "menus": {
@@ -61,13 +89,13 @@
           "when": "linggen.isLocalServer"
         },
         {
-          "command": "linggen.pinToMemory"
+          "command": "linggen.pinToAnchor"
         },
         {
           "command": "linggen.browseOnlineSkills"
         },
         {
-          "command": "linggen.openMemory",
+          "command": "linggen.openAnchor",
           "when": "false"
         },
         {
@@ -93,7 +121,7 @@
       ],
       "linggen.menu": [
         {
-          "command": "linggen.pinToMemory",
+          "command": "linggen.pinToAnchor",
           "group": "navigation@1"
         },
         {
@@ -111,8 +139,8 @@
       "properties": {
         "linggen.agent.url": {
           "type": "string",
-          "default": "http://localhost:6666",
-          "description": "Base URL of the Linggen Agent server (ling)"
+          "default": "http://localhost:9898",
+          "description": "Base URL of the Linggen server (ling)"
         }
       }
     }

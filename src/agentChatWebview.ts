@@ -1,11 +1,15 @@
-import type { Agent } from './agentApi';
+import type { Agent, ModelInfo } from './agentApi';
 
 /**
  * Returns self-contained HTML/CSS/JS for the Agent Chat webview panel.
  */
-export function getAgentChatWebviewHtml(agents: Agent[], defaultAgentId: string): string {
+export function getAgentChatWebviewHtml(agents: Agent[], defaultAgentId: string, models?: ModelInfo[], defaultModelId?: string): string {
     const agentOptions = agents
         .map(a => `<option value="${escapeHtml(a.id)}"${a.id === defaultAgentId ? ' selected' : ''}>${escapeHtml(a.name || a.id)}</option>`)
+        .join('\n');
+
+    const modelOptions = (models ?? [])
+        .map(m => `<option value="${escapeHtml(m.id)}"${m.id === defaultModelId ? ' selected' : ''}>${escapeHtml(m.id)}</option>`)
         .join('\n');
 
     return `<!DOCTYPE html>
@@ -13,7 +17,7 @@ export function getAgentChatWebviewHtml(agents: Agent[], defaultAgentId: string)
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Linggen Agent Chat</title>
+  <title>Linggen Chat</title>
   <style>
     :root { color-scheme: dark; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -127,6 +131,10 @@ export function getAgentChatWebviewHtml(agents: Agent[], defaultAgentId: string)
       <select id="agent-select">
         ${agentOptions}
       </select>
+      <span class="label">Model:</span>
+      <select id="model-select">
+        ${modelOptions}
+      </select>
       <span id="activity-status"></span>
     </div>
     <div id="messages"></div>
@@ -142,6 +150,7 @@ export function getAgentChatWebviewHtml(agents: Agent[], defaultAgentId: string)
       const inputEl = document.getElementById('msg-input');
       const sendBtn = document.getElementById('send-btn');
       const agentSelect = document.getElementById('agent-select');
+      const modelSelect = document.getElementById('model-select');
       const activityEl = document.getElementById('activity-status');
 
       let currentAgentBubble = null;
@@ -210,6 +219,10 @@ export function getAgentChatWebviewHtml(agents: Agent[], defaultAgentId: string)
         sending = v;
         sendBtn.disabled = v;
         inputEl.disabled = v;
+        if (!v) {
+          // Re-focus input when done sending
+          setTimeout(function() { inputEl.focus(); }, 0);
+        }
       }
 
       function doSend() {
@@ -224,6 +237,7 @@ export function getAgentChatWebviewHtml(agents: Agent[], defaultAgentId: string)
         });
         inputEl.value = '';
         inputEl.style.height = 'auto';
+        setTimeout(function() { inputEl.focus(); }, 0);
       }
 
       sendBtn.addEventListener('click', doSend);
@@ -237,6 +251,11 @@ export function getAgentChatWebviewHtml(agents: Agent[], defaultAgentId: string)
       inputEl.addEventListener('input', function() {
         this.style.height = 'auto';
         this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+      });
+
+      // Notify extension when model selection changes
+      modelSelect.addEventListener('change', function() {
+        vscode.postMessage({ type: 'modelChange', modelId: modelSelect.value });
       });
 
       // Messages from extension

@@ -13,7 +13,7 @@ suite('Linggen Extension Test Suite', () => {
 
         const expected = [
             'linggen.installCli',
-            'linggen.pinToMemory',
+            'linggen.pinToAnchor',
             'linggen.browseOnlineSkills',
             'linggen.agentChat',
             'linggen.agentListRuns',
