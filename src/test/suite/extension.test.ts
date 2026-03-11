@@ -31,6 +31,6 @@ suite('Linggen Extension Test Suite', () => {
         const config = vscode.workspace.getConfiguration('linggen');
 
         assert.ok(config.has('agent.url'), 'Should have agent.url config');
-        assert.strictEqual(config.get('agent.url'), 'http://localhost:6666');
+        assert.strictEqual(config.get('agent.url'), 'http://localhost:9898');
     });
 });

@@ -27,10 +27,17 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             portMapping: [{ webviewPort: serverPort, extensionHostPort: serverPort }],
         };
 
-        const externalUri = await vscode.env.asExternalUri(
-            vscode.Uri.parse(`${agentUrl}?mode=compact`)
+        const baseUri = await vscode.env.asExternalUri(
+            vscode.Uri.parse(agentUrl)
         );
-        const src = externalUri.toString();
+        // Pass workspace folder so the web UI auto-selects the right project
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        const projectRoot = workspaceFolders?.[0]?.uri.fsPath ?? '';
+        const params = new URLSearchParams({ mode: 'compact' });
+        if (projectRoot) {
+            params.set('project', projectRoot);
+        }
+        const src = baseUri.toString().replace(/\/+$/, '') + '?' + params.toString();
         const nonce = getNonce();
         const cspSource = webviewView.webview.cspSource;
 
@@ -53,11 +60,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     <code>src: ${src}</code>
   </div>
   <iframe id="frame"
-    sandbox="allow-scripts allow-forms allow-same-origin allow-downloads"
+    sandbox="allow-scripts allow-forms allow-same-origin allow-downloads allow-clipboard-read allow-clipboard-write"
+    allow="clipboard-read; clipboard-write"
     src="${src}"
     style="display:none"
   ></iframe>
   <script nonce="${nonce}">
+    const vscodeApi = acquireVsCodeApi();
     const frame = document.getElementById('frame');
     const debug = document.getElementById('debug');
     frame.onload = () => {
@@ -73,6 +82,26 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         frame.style.display = 'block';
       }
     }, 5000);
+
+    // Bridge clipboard shortcuts: VS Code intercepts Ctrl+C/V/X/A before
+    // they reach the iframe. The selection lives inside the iframe, so we
+    // use postMessage to ask the iframe to perform the copy via Clipboard API.
+    window.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+        switch (e.key) {
+          case 'c':
+            frame.contentWindow?.postMessage({ type: 'linggen-clipboard', action: 'copy' }, '*');
+            break;
+          case 'v': document.execCommand('paste'); break;
+          case 'x':
+            frame.contentWindow?.postMessage({ type: 'linggen-clipboard', action: 'cut' }, '*');
+            break;
+          case 'a':
+            frame.contentWindow?.postMessage({ type: 'linggen-clipboard', action: 'selectAll' }, '*');
+            break;
+        }
+      }
+    });
   </script>
 </body>
 </html>`;

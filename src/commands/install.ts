@@ -59,8 +59,8 @@ export async function installLinggenCli(): Promise<void> {
     }
 
     const binaryName = 'Linggen (ling)';
-    const installScript = 'curl -fsSL https://linggen.dev/install-agent.sh | bash';
-    const startCmd = 'ling serve';
+    const installScript = 'curl -fsSL https://linggen.dev/install.sh | bash';
+    const startCmd = 'ling';
 
     const choice = await vscode.window.showWarningMessage(
         `${binaryName} will be installed by running:\n\n${installScript}`,

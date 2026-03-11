@@ -49,42 +49,43 @@ npm run lint
 ```
 linggen-vscode/
 ├── src/
-│   ├── extension.ts          # Main extension entry point
+│   ├── extension.ts              # Main entry point (activate/deactivate)
+│   ├── agentApi.ts               # Agent server REST + SSE client
+│   ├── chatViewProvider.ts       # Sidebar webview (embeds Linggen web UI)
+│   ├── helpers.ts                # Utilities (URL handling, health checks)
+│   ├── healthMonitor.ts          # Backend health polling
+│   ├── linggenMonitor.ts         # Status bar health indicator
+│   ├── linggenAnchorProvider.ts  # CodeLens + DocumentLink for anchors
+│   ├── linggenWebviewHelper.ts   # Webview HTML utilities
+│   ├── output.ts                 # Output channel management
+│   ├── commands/
+│   │   ├── install.ts            # Install/update Linggen CLI
+│   │   ├── pinToAnchor.ts        # Pin code to anchor files
+│   │   ├── agentChat.ts          # Agent chat panel
+│   │   ├── agentRuns.ts          # View and cancel agent runs
+│   │   ├── bootstrapRules.ts     # Auto-generate AI rules files
+│   │   └── browseOnlineSkills.ts # Skills marketplace browser
 │   └── test/
-│       ├── runTest.ts         # Test runner
+│       ├── runTest.ts
 │       └── suite/
-│           ├── index.ts       # Test suite setup
-│           └── extension.test.ts  # Extension tests
-├── package.json               # Extension manifest and dependencies
-├── tsconfig.json             # TypeScript configuration
-├── README.md                 # User documentation
-└── CHANGELOG.md              # Version history
+│           ├── index.ts
+│           └── extension.test.ts
+├── package.json                   # Extension manifest
+├── tsconfig.json                  # TypeScript configuration
+├── README.md                      # User documentation
+└── CHANGELOG.md                   # Version history
 ```
 
 ## Adding New Commands
 
-1. **Register the command** in `package.json` under `contributes.commands`:
-   ```json
-   {
-     "command": "linggen.myNewCommand",
-     "title": "Linggen: My New Command"
-   }
-   ```
-
-2. **Implement the command** in `src/extension.ts`:
-   ```typescript
-   async function myNewCommand() {
-     // Implementation here
-   }
-   ```
-
-3. **Wire it up** in the `activate` function:
+1. **Register the command** in `package.json` under `contributes.commands`
+2. **Implement the command** in a file under `src/commands/`
+3. **Wire it up** in `src/extension.ts`:
    ```typescript
    context.subscriptions.push(
      vscode.commands.registerCommand('linggen.myNewCommand', myNewCommand)
    );
    ```
-
 4. **Add tests** in `src/test/suite/extension.test.ts`
 
 ## Code Style
@@ -92,6 +93,8 @@ linggen-vscode/
 - Use TypeScript strict mode
 - Follow the ESLint configuration
 - Use async/await for asynchronous operations
+- Prefer guard clauses and early returns over deep nesting
+- Keep files and functions small and focused
 - Log to the output channel for debugging
 - Show user-friendly error messages via `vscode.window.showErrorMessage`
 
@@ -105,5 +108,4 @@ linggen-vscode/
 
 ## Questions?
 
-If you have questions or need help, please open an issue on the repository.
-
+If you have questions or need help, please open an issue on the [repository](https://github.com/linggen/linggen-vscode).

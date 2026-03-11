@@ -76,6 +76,7 @@ export async function agentChat(): Promise<void> {
                     }
                     break;
                 case 'run_complete':
+                case 'turn_complete':
                     panel.webview.postMessage({
                         type: 'agentDone',
                         text: 'Done'

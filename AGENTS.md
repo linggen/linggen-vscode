@@ -1,3 +1,7 @@
 # Claude Code Instructions
 
-Please read `.claude/skills/memory/SKILL.md` on load to understand the Linggen Memory skill and context management system.
+## Linggen Anchor System
+
+Code files in this project may contain `// linggen anchor: <repo-relative-path>` comments.
+These comments point to anchor files under `.linggen/anchor/` (Markdown files with structured context).
+When you encounter a `linggen anchor:` comment, read the referenced file for context.

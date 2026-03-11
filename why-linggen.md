@@ -1,7 +1,9 @@
 # Why Linggen
 
-## Linggen helps individuals and teams use AI coding tools better and faster — by absorbing complexity (MCP, skills, prompts, tools) and turning it into simple, repeatable workflows.
+## Linggen is a local-first, multi-agent AI coding assistant that runs on your machine. Multiple agents work together — one explores, one codes, one debugs — while you stay in control.
 
-## Linggen is a cross-AI infrastructure tool. You can use Claude, Google, Cursor, or multiple tools together. Your skills, prompts, and workflows live in one place and are easy to share across projects and teams.
+## Linggen works with any LLM. Connect local models via Ollama or cloud APIs like Claude, GPT, and DeepSeek. Switch models per agent, per task, or let Linggen route automatically.
 
-## Linggen anchors code to memory. Notes, decisions, tiny tips, or logs stay close to the code they belong to — not lost in chats, docs, or commit messages.
+## Linggen is a cross-AI infrastructure tool. Skills, anchors, and agent specs are plain Markdown files that work across Claude Code, Cursor, Codex, and Linggen itself. Build once, use everywhere.
+
+## Linggen anchors code to context. Notes, decisions, and structured knowledge stay close to the code they belong to — not lost in chats, docs, or commit messages.
