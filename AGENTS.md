@@ -1,7 +1,6 @@
-# Claude Code Instructions
+# Agent Instructions
 
-## Linggen Anchor System
-
-Code files in this project may contain `// linggen anchor: <repo-relative-path>` comments.
-These comments point to anchor files under `.linggen/anchor/` (Markdown files with structured context).
-When you encounter a `linggen anchor:` comment, read the referenced file for context.
+Rebuild in progress. See `doc/product-spec.md` for the new direction:
+Linggen VS Code extension is a thin installer + bridge for ling-mem,
+not a chat surface. Old anchor system, agent chat, and skill installer
+have been removed.

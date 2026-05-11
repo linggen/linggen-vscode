@@ -1,8 +1,8 @@
 {
   "name": "linggen-vscode",
   "displayName": "Linggen",
-  "description": "VS Code extension for Linggen — your Personal AI OS. Connects to ling for autonomous coding, anchored context, and skill management.",
-  "version": "0.7.0",
+  "description": "Portable AI memory for Cursor, Copilot, Codex, and other AI agents in your editor. Powered by ling-mem.",
+  "version": "1.0.0",
   "publisher": "linggen",
   "homepage": "https://linggen.dev",
   "repository": {
@@ -23,124 +23,28 @@
   "contributes": {
     "commands": [
       {
-        "command": "linggen.installCli",
-        "category": "🌀Linggen",
-        "title": "Install/Update (ling)",
-        "description": "Install or update Linggen (ling)"
+        "command": "linggen.openDashboard",
+        "category": "Linggen",
+        "title": "Open Dashboard"
       },
       {
-        "command": "linggen.pinToAnchor",
-        "category": "🌀Linggen",
-        "title": "Pin to Anchor",
-        "shortTitle": "Pin to Anchor"
-      },
-      {
-        "command": "linggen.openAnchor",
-        "category": "🌀Linggen",
-        "title": "Open Anchor",
-        "shortTitle": "Open Anchor"
-      },
-      {
-        "command": "linggen.browseOnlineSkills",
-        "category": "🌀Linggen",
-        "title": "Browse Online Skills",
-        "shortTitle": "Browse Online Skills"
-      },
-      {
-        "command": "linggen.agentChat",
-        "category": "🌀Linggen",
-        "title": "Chat with Agent",
-        "shortTitle": "Chat with Agent"
-      },
-      {
-        "command": "linggen.agentListRuns",
-        "category": "🌀Linggen",
-        "title": "Agent Runs"
+        "command": "linggen.bridgeSettings",
+        "category": "Linggen",
+        "title": "Bridge Settings"
       }
     ],
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "linggen-sidebar",
-          "title": "Linggen",
-          "icon": "assets/icon.png"
-        }
-      ]
-    },
-    "views": {
-      "linggen-sidebar": [
-        {
-          "type": "webview",
-          "id": "linggen.chatView",
-          "name": "Chat"
-        }
-      ]
-    },
-    "submenus": [
-      {
-        "id": "linggen.menu",
-        "label": "🌀 Linggen"
-      }
-    ],
-    "menus": {
-      "commandPalette": [
-        {
-          "command": "linggen.installCli",
-          "when": "linggen.isLocalServer"
-        },
-        {
-          "command": "linggen.pinToAnchor"
-        },
-        {
-          "command": "linggen.browseOnlineSkills"
-        },
-        {
-          "command": "linggen.openAnchor",
-          "when": "false"
-        },
-        {
-          "command": "linggen.agentChat",
-          "when": "linggen.agentRunning"
-        },
-        {
-          "command": "linggen.agentListRuns",
-          "when": "linggen.agentRunning"
-        }
-      ],
-      "explorer/context": [
-        {
-          "submenu": "linggen.menu",
-          "group": "navigation@12"
-        }
-      ],
-      "editor/context": [
-        {
-          "submenu": "linggen.menu",
-          "group": "navigation@12"
-        }
-      ],
-      "linggen.menu": [
-        {
-          "command": "linggen.pinToAnchor",
-          "group": "navigation@1"
-        },
-        {
-          "command": "linggen.agentChat",
-          "group": "navigation@2"
-        },
-        {
-          "command": "linggen.browseOnlineSkills",
-          "group": "navigation@3"
-        }
-      ]
-    },
     "configuration": {
       "title": "Linggen",
       "properties": {
-        "linggen.agent.url": {
+        "linggen.dashboard.host": {
           "type": "string",
-          "default": "http://localhost:9898",
-          "description": "Base URL of the Linggen server (ling)"
+          "default": "127.0.0.1",
+          "description": "Host for the ling-mem dashboard server"
+        },
+        "linggen.dashboard.port": {
+          "type": "number",
+          "default": 9888,
+          "description": "Port for the ling-mem dashboard server"
         }
       }
     }
@@ -165,9 +69,5 @@
     "glob": "^10.3.10",
     "mocha": "^10.2.0",
     "typescript": "^5.3.0"
-  },
-  "dependencies": {
-    "@types/adm-zip": "^0.5.7",
-    "adm-zip": "^0.5.16"
   }
 }
