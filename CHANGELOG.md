@@ -2,6 +2,12 @@
 
 All notable changes to the "linggen-vscode" extension will be documented in this file.
 
+## [1.0.1] - 2026-05-11
+
+- Replace 128×128 icon with 512×512 render from `assets/logo.svg` so the icon
+  renders correctly on Open VSX and at retina resolution on the VS Code
+  Marketplace.
+
 ## [1.0.0] - 2026-05-11
 
 Full rebuild. The extension is now a thin installer and bridge for

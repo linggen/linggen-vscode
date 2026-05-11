@@ -2,7 +2,7 @@
   "name": "linggen-vscode",
   "displayName": "Linggen",
   "description": "Portable AI memory for Cursor, Copilot, Codex, and other AI agents in your editor. Powered by ling-mem.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "linggen",
   "homepage": "https://linggen.dev",
   "repository": {
