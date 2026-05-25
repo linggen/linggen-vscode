@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as lingMem from './lingMem';
 import { getOutputChannel } from './output';
 
-const INSTALL_SCRIPT_URL = 'https://linggen.dev/install-ling-mem.sh';
+const INSTALL_SCRIPT_URL = 'https://linggen.dev/install-shared-memory.sh';
 // LING_MEM_SOURCE flows into ling-mem's own install-source marker so its
 // telemetry can attribute installs that came through this extension. See
 // install.sh: write_install_source_marker() reads $LING_MEM_SOURCE.
@@ -37,7 +37,7 @@ async function runInstallInTerminal(): Promise<boolean> {
             cancellable: true
         },
         async (progress, token) => {
-            progress.report({ message: 'Waiting for install-ling-mem.sh to finish…' });
+            progress.report({ message: 'Waiting for install-shared-memory.sh to finish…' });
             const deadline = Date.now() + TIMEOUT_MS;
             while (Date.now() < deadline) {
                 if (token.isCancellationRequested) {

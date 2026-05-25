@@ -2,6 +2,17 @@
 
 All notable changes to the "linggen-vscode" extension will be documented in this file.
 
+## [1.0.2] - 2026-05-25
+
+- Track `ling-mem` v0.6.x's universal binary layout: look for the daemon
+  at `/usr/local/bin/ling-mem` (preferred) or `~/.local/bin/ling-mem`,
+  not at per-host `~/.claude/skills/ling-mem/bin/` or
+  `~/.linggen/skills/ling-mem/bin/` copies (those no longer exist).
+- Skill bundle path renamed `ling-mem` → `shared-memory` to match the
+  v0.6.x skill rename.
+- Switch auto-install to `linggen.dev/install-shared-memory.sh` (the old
+  `install-ling-mem.sh` URL still forwards, but the new URL is canonical).
+
 ## [1.0.1] - 2026-05-11
 
 - Replace 128×128 icon with 512×512 render from `assets/logo.svg` so the icon

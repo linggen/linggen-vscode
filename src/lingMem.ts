@@ -21,14 +21,13 @@ function home(...parts: string[]): string {
 }
 
 const BINARY_CANDIDATES = [
-    home('.claude', 'skills', 'ling-mem', 'bin', 'ling-mem'),
-    home('.linggen', 'skills', 'ling-mem', 'bin', 'ling-mem'),
+    '/usr/local/bin/ling-mem',
     home('.local', 'bin', 'ling-mem')
 ];
 
 const SKILL_DIR_CANDIDATES = [
-    home('.claude', 'skills', 'ling-mem'),
-    home('.linggen', 'skills', 'ling-mem')
+    home('.linggen', 'skills', 'shared-memory'),
+    home('.claude', 'skills', 'shared-memory')
 ];
 
 export function binaryPath(): string {
