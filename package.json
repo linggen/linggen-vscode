@@ -43,7 +43,7 @@
         },
         "linggen.dashboard.port": {
           "type": "number",
-          "default": 9888,
+          "default": 9528,
           "description": "Port for the ling-mem dashboard server"
         }
       }

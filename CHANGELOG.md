@@ -62,7 +62,7 @@ If you relied on these, stay on 0.7.0 or use the Linggen web UI directly.
 
 - Removed: `linggen.agent.url`
 - Added: `linggen.dashboard.host` (default `127.0.0.1`),
-  `linggen.dashboard.port` (default `9888`)
+  `linggen.dashboard.port` (default `9528`)
 
 ## [0.7.0] - 2026-03-11
 

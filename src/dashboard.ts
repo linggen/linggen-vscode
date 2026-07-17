@@ -12,7 +12,7 @@ export function getHost(): string {
 }
 
 export function getPort(): number {
-    return vscode.workspace.getConfiguration('linggen').get<number>('dashboard.port', 9888);
+    return vscode.workspace.getConfiguration('linggen').get<number>('dashboard.port', 9528);
 }
 
 export function isLocalHost(host: string): boolean {

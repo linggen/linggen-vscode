@@ -72,7 +72,7 @@ own schedule.
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `linggen.dashboard.host` | `127.0.0.1` | Host for the ling-mem dashboard |
-| `linggen.dashboard.port` | `9888` | Port for the ling-mem dashboard |
+| `linggen.dashboard.port` | `9528` | Port for the ling-mem dashboard |
 
 ## Telemetry
 
