@@ -3,10 +3,11 @@ import * as lingMem from './lingMem';
 import { getOutputChannel } from './output';
 
 const INSTALL_SCRIPT_URL = 'https://linggen.dev/install-shared-memory.sh';
-// LING_MEM_SOURCE flows into ling-mem's own install-source marker so its
-// telemetry can attribute installs that came through this extension. See
-// install.sh: write_install_source_marker() reads $LING_MEM_SOURCE.
-const INSTALL_CMD = `curl -fsSL ${INSTALL_SCRIPT_URL} | LING_MEM_SOURCE=vscode-extension bash`;
+// LING_MEM_SOURCE / LING_MEM_AGENT flow into ling-mem's own install-source
+// marker so its telemetry can attribute installs that came through this
+// extension (via = the door, agent = the host; see linggensite
+// doc/analytics-spec.md § Install provenance).
+const INSTALL_CMD = `curl -fsSL ${INSTALL_SCRIPT_URL} | LING_MEM_SOURCE=vscode-extension LING_MEM_AGENT=vscode bash`;
 const POLL_INTERVAL_MS = 2000;
 const TIMEOUT_MS = 5 * 60 * 1000;
 
