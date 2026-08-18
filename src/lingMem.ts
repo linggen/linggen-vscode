@@ -20,9 +20,16 @@ function home(...parts: string[]): string {
     return path.join(os.homedir(), ...parts);
 }
 
+// ~/.local/bin/ling-mem is THE binary — a singleton shared by every host,
+// written only by install-bin.sh. It must come first: this list is
+// first-match-wins, and /usr/local/bin used to be preferred, so a stale
+// copy left there by an old installer won every lookup.
+//
+// /usr/local/bin stays as a fallback only, for machines still carrying
+// such a copy; it is never where a current install puts the binary.
 const BINARY_CANDIDATES = [
-    '/usr/local/bin/ling-mem',
-    home('.local', 'bin', 'ling-mem')
+    home('.local', 'bin', 'ling-mem'),
+    '/usr/local/bin/ling-mem'
 ];
 
 const SKILL_DIR_CANDIDATES = [
