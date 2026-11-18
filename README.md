@@ -1,5 +1,16 @@
 # Linggen — Portable AI Memory for Your Editor
 
+> **This extension is retired and this repository is archived.** It
+> installed the standalone `ling-mem` program, which no longer exists: since
+> Linggen 2.3 (November 2026) the memory is part of Linggen itself. The
+> extension does not work with Linggen 2.3 or later and gets no updates.
+>
+> To give your coding agent Linggen's memory, install Linggen from
+> <https://linggen.dev> and add its plugin for Claude Code or Codex — see
+> **[linggen/linggen](https://github.com/linggen/linggen)**.
+>
+> Below is the README as it stood at the last release, 1.0.2.
+
 Bring **ling-mem** — portable, user-owned AI memory — into VS Code, Cursor,
 Windsurf, Codex, and Copilot. Your preferences, decisions, and gotchas follow
 you across every AI tool you use.
